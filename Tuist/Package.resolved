@@ -1,0 +1,51 @@
+{
+  "originHash" : "d54046f2fd51847113f5cf97039ac36353632310cb63df67f4e078a0b7c63566",
+  "pins" : [
+    {
+      "identity" : "innodi",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/InnoSquadCorp/InnoDI.git",
+      "state" : {
+        "revision" : "17aa12230d54375c7963f7c2c909acad1e71d087",
+        "version" : "3.0.1"
+      }
+    },
+    {
+      "identity" : "innoflow",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/InnoSquadCorp/InnoFlow",
+      "state" : {
+        "revision" : "80929bdbc8adad6892d970304d89b396eb5115d1",
+        "version" : "3.0.2"
+      }
+    },
+    {
+      "identity" : "innonetwork",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/InnoSquadCorp/InnoNetwork.git",
+      "state" : {
+        "revision" : "bdd05f842c99fe152d9b3b08c3565ce5ca9c6e61",
+        "version" : "3.1.0"
+      }
+    },
+    {
+      "identity" : "innorouter",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/InnoSquadCorp/InnoRouter.git",
+      "state" : {
+        "revision" : "dfec715370cd0bd94dc62083a6c1e382a8a43d98",
+        "version" : "3.0.0"
+      }
+    },
+    {
+      "identity" : "swift-syntax",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/swiftlang/swift-syntax.git",
+      "state" : {
+        "revision" : "4799286537280063c85a32f09884cfbca301b1a1",
+        "version" : "602.0.0"
+      }
+    }
+  ],
+  "version" : 3
+}
