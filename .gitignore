@@ -1,0 +1,9 @@
+**/.DS_Store
+**/.build/
+**/.codex-artifacts/
+**/Derived/
+**/*.xcodeproj/
+**/*.xcworkspace/
+**/*.xcworkspace/xcuserdata/
+**/xcuserdata/
+**/*.xcuserstate
