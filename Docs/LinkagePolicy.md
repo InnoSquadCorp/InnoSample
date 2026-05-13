@@ -16,7 +16,6 @@
 ### Shared Contract / Infrastructure
 
 - `Domain`: framework
-- `CoreNetwork`: framework
 - `AnalyticsInterface`: framework
 
 이 모듈들은 여러 상위 모듈이 직접 소비하는 shared 계약 또는 공용 인프라입니다.
@@ -34,6 +33,7 @@
 
 이 모듈들은 구현체에 가깝고 상위 composition이 조립하는 leaf입니다.
 가능한 한 static으로 두어 duplication과 런타임 중복 로드 위험을 줄입니다.
+`Remote`는 외부 API 호출 정책과 InnoNetwork client 조립을 소유하지만, 소비자는 `Data`의 remote data source contract만 봅니다.
 
 ## Rationale
 

@@ -3,13 +3,21 @@ import Foundation
 import InnoFlow
 import SettingsFeatureInterface
 
-@InnoFlow
+@InnoFlow(phaseManaged: true)
 struct SettingsFeatureReducer {
     struct Dependencies: Sendable {
         let loadTodos: @Sendable () async throws -> [TodoSummary]
     }
 
     struct State: Equatable, Sendable, DefaultInitializable {
+        enum Phase: Hashable, Sendable {
+            case idle
+            case loading
+            case loaded
+            case failed
+        }
+
+        var phase: Phase = .idle
         var isLoading = false
         var hasLoaded = false
         var todos: [TodoSummary] = []
@@ -38,6 +46,30 @@ struct SettingsFeatureReducer {
     }
 
     let dependencies: Dependencies
+
+    static var phaseMap: PhaseMap<State, Action, State.Phase> {
+        PhaseMap(\State.phase) {
+            From(.idle) {
+                On(.onAppear, to: .loading)
+                On(.refresh, to: .loading)
+            }
+            From(.loading) {
+                On(Action.todosLoadedCasePath, to: .loaded)
+                On(Action.todosFailedCasePath, to: .failed)
+            }
+            From(.loaded) {
+                On(.refresh, to: .loading)
+            }
+            From(.failed) {
+                On(.onAppear, to: .loading)
+                On(.refresh, to: .loading)
+            }
+        }
+    }
+
+    static var phaseGraph: PhaseTransitionGraph<State.Phase> {
+        phaseMap.derivedGraph
+    }
 
     var body: some Reducer<State, Action> {
         Reduce { state, action in

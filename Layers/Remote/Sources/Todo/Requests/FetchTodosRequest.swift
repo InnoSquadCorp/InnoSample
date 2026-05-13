@@ -1,10 +1,8 @@
-import CoreNetwork
 import Data
 
-struct FetchTodosRequest: RequestDefinition {
-    typealias ResponseBody = [TodoRemoteModel]
+struct FetchTodosRequest: RemoteRequest {
+    typealias APIResponse = [TodoRemoteModel]
 
     let featureName = "Settings"
-    var path: String { "/todos" }
-    var headerPolicy: HeaderPolicy { .external }
+    let path = "/todos"
 }

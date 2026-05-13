@@ -1,4 +1,4 @@
-enum PlatformInfo {
+enum RemotePlatformInfo {
     #if os(iOS)
     static let name = "iOS"
     #elseif os(macOS)

@@ -1,16 +1,16 @@
 # InnoSample
 
-`InnoSample`은 `banksalad-ios`의 `Features / Layers / Cores / ThirdParties / Util` 분리를 참고해 만든 Tuist 기반 baseline sample 입니다.  
+`InnoSample`은 `banksalad-ios`의 `Features / Layers / ThirdParties / Util` 분리를 참고해 만든 Tuist 기반 baseline sample 입니다.
 목적은 기능 구현보다 먼저, Inno 계열 앱에서 공통으로 쓸 **모듈 경계, composition 방식, DI wiring, navigation ownership, Tuist helper 정책**을 고정하는 데 있습니다.  
 즉 이 저장소는 “샘플 앱”이면서 동시에 **개발 시작 전 기본 뼈대(scaffold)** 역할을 합니다.
 
 구조 원칙은 다음 의존 방향으로 정리합니다.
 - `Feature -> Domain`
 - `Data -> Domain`
-- `Remote -> Data + CoreNetwork`
+- `Remote -> Data + InnoNetwork`
 - `Layers -> Domain + Data + Remote`
 - `Features -> Domain + Feature`
-- `App -> CoreNetwork + Layers + Features + ThirdParty`
+- `App -> Layers + Features + ThirdParty`
 
 `InnoDI`, `InnoFlow`, `InnoNetwork`, `InnoRouter`를 쓰는 각 모듈은 독립 `Project.swift`로 관리하고, 루트는 `Workspace.swift`로 조립합니다.  
 Inno 라이브러리 의존성은 로컬 path package가 아니라 `Tuist/Package.swift`에서 관리하는 remote package + exact version 고정 방식으로 소비합니다.
@@ -31,14 +31,10 @@ Inno 라이브러리 의존성은 로컬 path package가 아니라 `Tuist/Packag
 - `InnoNetwork`
   - 가장 안쪽 transport 구현입니다.
   - `NetworkClient`, `APIDefinition`, retry, interceptor, logger 같은 실행 메커니즘을 가집니다.
-- `CoreNetwork`
-  - `InnoNetwork`를 감싸는 infrastructure boundary 입니다.
-  - 앱 공통 환경값, 기본 header, request/response interceptor, retry policy, logger를 소유합니다.
-  - `NetworkTransport`를 통해 상위 레이어에 "요청을 실행하는 방법"만 노출합니다.
 - `Remote`
-  - 외부 API의 endpoint 의미와 remote model 변환만 가집니다.
+  - 외부 API의 endpoint 의미, remote model decode, InnoNetwork client 조립을 소유합니다.
   - `Data`가 소유한 remote data source contract를 구현합니다.
-  - `CoreNetwork`의 `RequestDefinition`, `NetworkTransport`만 사용합니다.
+  - base URL, retry, timeout, request/response interceptor, remote failure 변환을 이 레이어 안에 둡니다.
 - `Data`
   - domain repository 구현과 remote data source contract를 함께 소유합니다.
   - 비어 있는 응답 처리나 리스트 curate 같은 데이터 정책이 이 레이어에 있습니다.
@@ -106,8 +102,7 @@ Inno 라이브러리 의존성은 로컬 path package가 아니라 `Tuist/Packag
 - `AppContainer`가 remote/data/domain 구현이나 개별 feature wiring을 직접 조립하지 않게 해서 상위 composition 책임을 줄이기 위해
 - `banksalad-ios`와 비슷하게 루트 `Layers` 프로젝트가 `Remote/Data/Domain` 연결을 맡고, 루트 `Features` 프로젝트는 domain 의존성만 받아 feature 조립을 맡게 하기 위해
 
-즉, 이 샘플에서 `CoreNetwork`는 단순 factory가 아니라 transport adapter 입니다.  
-또한 `Layers` 루트 프로젝트와 `Features` 루트 프로젝트는 구현 레이어가 아니라 composition 레이어입니다.
+즉, 이 샘플에서 `Remote`는 외부 API 호출 정책을 소유하고, `Layers` 루트 프로젝트와 `Features` 루트 프로젝트는 구현 레이어가 아니라 composition 레이어입니다.
 
 ## Architecture Graph
 
@@ -116,8 +111,7 @@ graph TD
     App["App"]
     AppContainer["AppContainer"]
     Analytics["Analytics"]
-    CoreNetwork["CoreNetwork"]
-    NetworkTransport["NetworkTransport"]
+    InnoNetwork["InnoNetwork"]
     Layers["Layers"]
     LayerContainer["LayerContainer"]
     RemoteContainer["RemoteContainer"]
@@ -132,9 +126,6 @@ graph TD
 
     App --> AppContainer
     AppContainer --> Analytics
-    AppContainer --> CoreNetwork
-    CoreNetwork --> NetworkTransport
-    AppContainer --> NetworkTransport
     AppContainer --> Layers
     AppContainer --> Features
 
@@ -142,7 +133,7 @@ graph TD
     LayerContainer --> RemoteContainer
     LayerContainer --> DataContainer
     LayerContainer --> DomainContainer
-    RemoteContainer --> CoreNetwork
+    RemoteContainer --> InnoNetwork
     DataContainer --> RemoteContainer
     DomainContainer --> DataContainer
 
@@ -168,7 +159,6 @@ graph TD
   - 공용 destinations / deployment targets / dependency helper
 - `App/Project.swift`
 - `Features/Project.swift`
-- `Cores/CoreNetwork/Project.swift`
 - `Layers/*/Project.swift`
 - `Features/*/Project.swift`
 - `ThirdParties/*/Project.swift` (SDK wrapper가 생길 때 사용)
@@ -188,23 +178,11 @@ Tuist helper는 현재 두 단계로 destinations / deployment targets를 나눕
   - 샘플 analytics wrapper를 통해 앱 시작 이벤트를 기록
 - `App/Sources/AppContainer.swift`
   - `InnoDI` root container
-  - base URL 입력으로 `NetworkTransport -> LayerContainer -> FeatureContainer` 순서로 조립
+  - base URL 입력으로 `LayerContainer -> FeatureContainer` 순서로 조립
   - `Layers` 내부의 data/domain container를 모르고, 개별 feature wiring 대신 use case를 root `Features`에 전달
   - `AnalyticsClient` concrete 구현을 앱 composition root에서 생성
   - `Project.app(watchCompanion: ...)`로 iOS companion watch app / watch extension 타깃을 함께 생성
   - `App/Project.swift`에서 앱 타깃 정의
-
-### Cores
-- `Cores/CoreNetwork`
-  - `InnoNetwork`를 앱 공통 규칙으로 감싸는 네트워크 코어
-  - `NetworkEnvironment`로 base URL / app metadata / header policy source of truth 관리
-  - `NetworkFactory`로 `NetworkConfiguration`, retry policy, transport 생성
-  - `RequestDefinition`, `HeaderPolicy`, `NetworkFailure`를 통해 request/error 정책을 명시
-  - `HeaderPolicy.custom`은 환경 기본 헤더를 opt-out하지만 `X-Request-ID`는 추적을 위해 계속 자동 추가
-  - request/response interceptor와 logger를 공통 적용
-  - `InnoNetwork 3.1.0`의 `LowLevelNetworkClient.perform(executable:)`를 소비해 concrete client 타입 의존을 줄임
-  - `NetworkTransport`가 `Remote` 대신 `InnoNetwork`를 직접 다룸
-  - `Cores/CoreNetwork/Project.swift`에서 독립 project로 관리
 
 ### Layers
 - `Layers`
@@ -224,7 +202,7 @@ Tuist helper는 현재 두 단계로 destinations / deployment targets를 나눕
   - shared contract는 actor-agnostic로 유지하고, main actor는 `Layers / Features / App` composition 경계에서만 적용
   - `DomainContainer`가 모든 repository 입력을 받고, use case는 도메인별 extension에서 computed로 제공
   - 현재 제약:
-    - `Domain`은 `Data` contract만 알고 `Remote`나 `CoreNetwork`를 모름
+    - `Domain`은 `Data` contract만 알고 `Remote`를 모름
     - summary 모델, repository protocol, use case는 도메인별 폴더에 두고, composition helper는 `Container` 아래로 분리
 - `Layers/Data`
   - repository 구현과 remote data source contract 정의
@@ -234,17 +212,17 @@ Tuist helper는 현재 두 단계로 destinations / deployment targets를 나눕
     - `Data`가 DTO -> Domain 매핑과 curate / empty response 정책을 담당
     - `Data`는 `RemoteDataSourceContaining` contract만 의존하고 `RemoteContainer` concrete는 직접 퍼뜨리지 않음
 - `Layers/Remote`
-  - JSONPlaceholder request definition과 remote model 매핑
-  - `User/Post/Todo` 도메인 아래 `Requests/DataSources/Factories`로 폴더를 나눠 역할을 드러냄
+  - JSONPlaceholder request definition, remote model decode, InnoNetwork client 조립
+  - `User/Post/Todo` 도메인 아래 `Requests/DataSources/Factories`로 폴더를 나누고, 공통 실행 정책은 `Infrastructure`에 둠
   - raw 응답을 그대로 퍼뜨리지 않고, 필요한 필드만 평탄화/정규화한 DTO를 반환
-  - 외부 도메인 호출은 `HeaderPolicy.external`을 사용
   - `Data`가 정의한 remote data source contract 구현
-  - `RemoteContainer`가 `CoreNetwork` transport 기반 data source를 shared로 제공
-  - `InnoNetwork`를 직접 import 하지 않음
+  - `RemoteContainer`가 base URL로 InnoNetwork client와 data source를 shared로 제공
+  - `InnoNetwork 4.0.0`의 stable public surface인 `APIDefinition`과 `NetworkClient.request(_:)`를 사용
+  - request는 InnoNetwork 기본 헤더를 보존하고, 앱 메타데이터와 trace header만 `Remote` 내부 interceptor에서 적용
   - 각 layer는 별도 `Project.swift`로 분리
   - 현재 제약:
     - `Remote`는 DTO decode와 remote data source 구현만 담당하고 `Domain` 모델을 직접 만들지 않음
-    - request 실행은 `NetworkTransport`가 맡고, request 타입은 순수 명세값으로 유지
+    - request 실행, request metadata, remote failure 변환은 `Remote` 내부 구현으로 유지
 
 ### Features
 - `Features`
@@ -380,6 +358,7 @@ make verify
 - Inno 라이브러리 의존성 source of truth는 `Tuist/Package.swift` 입니다.
 - 버전은 `exact`로 고정하고 `Tuist/Package.resolved`를 함께 관리합니다.
 - 따라서 프레임워크를 로컬 수정해 즉시 반영하는 용도보다는, 외부 사용자 관점의 통합 예제로 보는 편이 맞습니다.
+- 공개 배포된 macro surface가 있으면 우선 사용합니다. 단, `InnoNetworkCodegen`처럼 아직 별도 공개 패키지로 배포되지 않은 macro package는 fresh clone 빌드 가능성을 위해 로컬 path dependency로 끌어오지 않습니다.
 
 현재 확인된 빌드 상태:
 - `InnoDI`와 `InnoFlow` 모두 consumer package graph에서 `swift-docc-plugin`을 제거한 뒤에도 `tuist generate`, `xcodebuild`는 성공합니다.

@@ -4,7 +4,7 @@ ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 WORKSPACE := $(ROOT)/InnoSample.xcworkspace
 DERIVED_DATA ?= /tmp/innosample-make
 
-.PHONY: help generate open verify-boundaries verify-di test-domain test-data test-leaf-features test-layers test-features test-app build-app verify
+.PHONY: help generate open verify-boundaries verify-di test-domain test-data test-remote test-leaf-features test-layers test-features test-app build-app verify
 
 help:
 	@echo "Available targets:"
@@ -14,6 +14,7 @@ help:
 	@echo "  make verify-di            # Validate InnoDI container DAG"
 	@echo "  make test-domain          # Run Domain tests"
 	@echo "  make test-data            # Run Data tests"
+	@echo "  make test-remote          # Run Remote tests"
 	@echo "  make test-leaf-features   # Run People/Posts/Settings/EntireTab feature tests"
 	@echo "  make test-layers          # Run Layers tests"
 	@echo "  make test-features        # Run root Features tests"
@@ -39,6 +40,9 @@ test-domain:
 test-data:
 	cd "$(ROOT)" && xcodebuild -workspace "$(WORKSPACE)" -scheme Data -destination 'platform=macOS' -derivedDataPath "$(DERIVED_DATA)/Data" test
 
+test-remote:
+	cd "$(ROOT)" && xcodebuild -workspace "$(WORKSPACE)" -scheme Remote -destination 'platform=macOS' -derivedDataPath "$(DERIVED_DATA)/Remote" test
+
 test-leaf-features:
 	cd "$(ROOT)" && xcodebuild -workspace "$(WORKSPACE)" -scheme PeopleFeature -destination 'platform=macOS' -derivedDataPath "$(DERIVED_DATA)/PeopleFeature" test
 	cd "$(ROOT)" && xcodebuild -workspace "$(WORKSPACE)" -scheme PostsFeature -destination 'platform=macOS' -derivedDataPath "$(DERIVED_DATA)/PostsFeature" test
@@ -57,4 +61,4 @@ test-app:
 build-app:
 	cd "$(ROOT)" && xcodebuild -workspace "$(WORKSPACE)" -scheme InnoSampleApp -destination 'generic/platform=iOS' -derivedDataPath "$(DERIVED_DATA)/InnoSampleAppBuild" build
 
-verify: generate verify-boundaries verify-di test-domain test-data test-leaf-features test-layers test-features test-app build-app
+verify: generate verify-boundaries verify-di test-domain test-data test-remote test-leaf-features test-layers test-features test-app build-app

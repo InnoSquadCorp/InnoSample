@@ -7,13 +7,13 @@ import SettingsFeatureRouter
 @DIContainer
 public struct EntireTabContainer {
     @Provide(.input)
-    var peopleCoordinator: PeopleFeatureCoordinator
+    public var peopleCoordinator: PeopleFeatureCoordinator
 
     @Provide(.input)
-    var postsCoordinator: PostsFeatureCoordinator
+    public var postsCoordinator: PostsFeatureCoordinator
 
     @Provide(.input)
-    var settingsCoordinator: SettingsFeatureCoordinator
+    public var settingsCoordinator: SettingsFeatureCoordinator
 
     @Provide(.transient, factory: {
         (

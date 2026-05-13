@@ -6,15 +6,13 @@ let project = Project.app(
     watchCompanion: .default(),
     dependencies: [
         .features,
-        .core(.network),
         .layers,
         .thirdParty(.analytics),
         .thirdParty(interface: .analytics),
-        .package(.innoDI)
+        .package(.innoDISwiftUI)
     ],
     testDependencies: [
         .features,
-        .core(.network),
         .layers,
         .thirdParty(.analytics),
         .thirdParty(interface: .analytics)

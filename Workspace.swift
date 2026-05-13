@@ -4,7 +4,6 @@ let workspace = Workspace(
     name: "InnoSample",
     projects: [
         .relativeToRoot("App"),
-        .relativeToRoot("Cores/**"),
         .relativeToRoot("Layers/**"),
         .relativeToRoot("ThirdParties/**"),
         .relativeToRoot("Utils/**"),

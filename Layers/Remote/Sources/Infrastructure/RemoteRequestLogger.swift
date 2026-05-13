@@ -2,9 +2,9 @@ import Foundation
 import InnoNetwork
 import OSLog
 
-struct RequestLogger: NetworkLogger {
+struct RemoteRequestLogger: NetworkLogger {
     private let baseLogger: DefaultNetworkLogger
-    private let diagnosticLogger = Logger(subsystem: "com.innosquad.InnoSample", category: "CoreNetwork")
+    private let diagnosticLogger = Logger(subsystem: "com.innosquad.InnoSample", category: "Remote")
 
     init(options: NetworkLoggingOptions = .secureDefault) {
         self.baseLogger = DefaultNetworkLogger(options: options)

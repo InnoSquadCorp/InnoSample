@@ -1,13 +1,14 @@
 import Analytics
 import AnalyticsInterface
-import CoreNetwork
+import Domain
 import Features
 import Foundation
 import InnoDI
+import InnoDISwiftUI
 import Layers
 
 @MainActor
-@DIContainer(root: true)
+@DIContainer(root: true, mainActor: true)
 struct AppContainer {
     // MARK: - Inputs
 
@@ -21,23 +22,25 @@ struct AppContainer {
     }, concrete: true)
     var analyticsClient: AnalyticsClient
 
-    @Provide(.shared, factory: { (baseURL: URL) in
-        NetworkFactory.makeTransport(baseURL: baseURL)
-    }, concrete: true)
-    var networkTransport: NetworkTransport
-
     // MARK: - Layer Composition
 
-    @Provide(.shared, factory: { (networkTransport: NetworkTransport) in
-        LayerContainer.make(networkTransport: networkTransport)
+    @Provide(.shared, factory: { (baseURL: URL) in
+        LayerContainer(baseURL: baseURL)
     }, concrete: true)
     var layerContainer: LayerContainer
 
     // MARK: - Root Features
 
     @Provide(.shared, factory: { (layerContainer: LayerContainer) in
-        FeatureContainer.make(useCases: layerContainer.featureUseCases)
-    }, concrete: true)
+        layerContainer.featureUseCases
+    })
+    var featureUseCases: any FeatureUseCaseContaining
+
+    @SubContainer(
+        scope: .shared,
+        bindings: [(child: \FeatureContainer.useCases, parent: \AppContainer.featureUseCases)],
+        featureRoot: FeatureRootScene.self
+    )
     var featureContainer: FeatureContainer
 
     // MARK: - Lifecycle

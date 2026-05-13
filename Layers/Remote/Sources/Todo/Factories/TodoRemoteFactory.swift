@@ -1,10 +1,10 @@
-import CoreNetwork
 import Data
+import InnoNetwork
 
 enum TodoRemoteFactory {
-    static func make(networkTransport: NetworkTransport) -> any TodoRemoteDataSourceProtocol {
+    static func make(networkClient: any NetworkClient) -> any TodoRemoteDataSourceProtocol {
         JSONPlaceholderTodoRemoteDataSource(
-            transport: networkTransport
+            transport: RemoteTransport(client: networkClient)
         ) as any TodoRemoteDataSourceProtocol
     }
 }

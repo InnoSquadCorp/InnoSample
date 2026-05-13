@@ -43,7 +43,7 @@ public final class SettingsFeatureCoordinator {
 
     func syncNavigationFromSelection() {
         guard let selectedTodo = model.consumeSelectedTodo() else { return }
-        navigationStore.send(.resetTo([.detail(selectedTodo)]))
+        navigationStore.send(.replaceStack([SettingsRoute.detail(selectedTodo)]))
     }
 
     func syncModalPresentation() {

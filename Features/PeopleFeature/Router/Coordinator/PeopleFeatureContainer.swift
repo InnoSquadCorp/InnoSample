@@ -5,7 +5,7 @@ import PeopleFeatureInterface
 @DIContainer
 public struct PeopleFeatureContainer {
     @Provide(.input)
-    var input: PeopleFeatureInput
+    public var input: PeopleFeatureInput
 
     @Provide(.transient, factory: { (input: PeopleFeatureInput) in
         PeopleFeatureCoordinator(input: input)

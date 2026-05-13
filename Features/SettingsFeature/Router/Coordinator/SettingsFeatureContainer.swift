@@ -5,7 +5,7 @@ import SettingsFeatureInterface
 @DIContainer
 public struct SettingsFeatureContainer {
     @Provide(.input)
-    var input: SettingsFeatureInput
+    public var input: SettingsFeatureInput
 
     @Provide(.transient, factory: { (input: SettingsFeatureInput) in
         SettingsFeatureCoordinator(input: input)

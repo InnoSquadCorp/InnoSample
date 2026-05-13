@@ -17,7 +17,8 @@ let project = Project.feature(
         ],
         router: [
             .package(.innoDI),
-            .package(.innoRouter)
+            .package(.innoRouter),
+            .package(.innoRouterMacros)
         ],
         tests: [
             .layer(.domain)

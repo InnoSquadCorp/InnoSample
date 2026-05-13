@@ -1,10 +1,8 @@
-import CoreNetwork
 import Data
 
-struct FetchPostsRequest: RequestDefinition {
-    typealias ResponseBody = [PostRemoteModel]
+struct FetchPostsRequest: RemoteRequest {
+    typealias APIResponse = [PostRemoteModel]
 
     let featureName = "Posts"
-    var path: String { "/posts" }
-    var headerPolicy: HeaderPolicy { .external }
+    let path = "/posts"
 }

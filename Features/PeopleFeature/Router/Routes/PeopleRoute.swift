@@ -1,6 +1,8 @@
 import InnoRouter
+import InnoRouterMacros
 import PeopleFeatureInterface
 
-enum PeopleRoute: Route {
+@Routable
+enum PeopleRoute {
     case detail(PeopleUser)
 }

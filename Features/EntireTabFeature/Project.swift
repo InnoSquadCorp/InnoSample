@@ -11,7 +11,8 @@ let project = Project.compositeFeature(
         ],
         router: [
             .package(.innoDI),
-            .package(.innoRouter)
+            .package(.innoRouter),
+            .package(.innoRouterMacros)
         ]
     )
 )

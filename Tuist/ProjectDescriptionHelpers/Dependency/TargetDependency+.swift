@@ -47,10 +47,6 @@ public extension TargetDependency {
         return .project(target: module.rawValue, path: .relativeToRoot(path))
     }
 
-    static func core(_ module: CoreModule) -> Self {
-        .project(target: module.rawValue, path: .relativeToRoot("Cores/\(module.rawValue)"))
-    }
-
     static func thirdParty(_ module: ThirdPartyModule) -> Self {
         .project(target: module.rawValue, path: .relativeToRoot("ThirdParties/\(module.rawValue)"))
     }

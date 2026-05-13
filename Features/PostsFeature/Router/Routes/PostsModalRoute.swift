@@ -1,6 +1,8 @@
 import InnoRouter
+import InnoRouterMacros
 import PostsFeatureInterface
 
-enum PostsModalRoute: Route {
+@Routable
+enum PostsModalRoute {
     case highlights([FeaturePost])
 }

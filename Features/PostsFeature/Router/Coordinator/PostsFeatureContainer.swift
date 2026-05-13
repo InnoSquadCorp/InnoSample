@@ -5,7 +5,7 @@ import PostsFeatureInterface
 @DIContainer
 public struct PostsFeatureContainer {
     @Provide(.input)
-    var input: PostsFeatureInput
+    public var input: PostsFeatureInput
 
     @Provide(.transient, factory: { (input: PostsFeatureInput) in
         PostsFeatureCoordinator(input: input)

@@ -20,14 +20,12 @@ final class InnoSampleAppTests: XCTestCase {
             let container = AppContainer(
                 baseURL: URL(string: "https://jsonplaceholder.typicode.com")!
             )
-            _ = container.networkTransport
             _ = container.layerContainer.fetchPeopleUseCase
             _ = container.layerContainer.fetchPostsUseCase
             _ = container.layerContainer.fetchTodosUseCase
             _ = container.layerContainer.featureUseCases.fetchPeopleUseCase
 
             return (
-                true,
                 true,
                 true,
                 true,
@@ -39,7 +37,6 @@ final class InnoSampleAppTests: XCTestCase {
         XCTAssertTrue(snapshot.1)
         XCTAssertTrue(snapshot.2)
         XCTAssertTrue(snapshot.3)
-        XCTAssertTrue(snapshot.4)
     }
 
     func testAppContainerTracksLaunchEventWithoutBreakingAsyncWiring() async {
@@ -58,7 +55,7 @@ final class InnoSampleAppTests: XCTestCase {
             let container = AppContainer(
                 baseURL: URL(string: "https://jsonplaceholder.typicode.com")!
             )
-            let scene = FeatureRootScene(coordinator: container.featureContainer.coordinator)
+            let scene = container.featureContainerRootView()
             _ = scene.body
             return true
         }

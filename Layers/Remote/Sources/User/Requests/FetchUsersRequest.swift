@@ -1,10 +1,8 @@
-import CoreNetwork
 import Data
 
-struct FetchUsersRequest: RequestDefinition {
-    typealias ResponseBody = [UserRemoteModel]
+struct FetchUsersRequest: RemoteRequest {
+    typealias APIResponse = [UserRemoteModel]
 
     let featureName = "People"
-    var path: String { "/users" }
-    var headerPolicy: HeaderPolicy { .external }
+    let path = "/users"
 }

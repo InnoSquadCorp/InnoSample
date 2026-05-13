@@ -11,7 +11,8 @@ let project = Project.rootFeatures(
         .feature(interface: .people),
         .feature(interface: .posts),
         .feature(interface: .settings),
-        .layer(.domain)
+        .layer(.domain),
+        .package(.innoDI)
     ],
     testDependencies: [
         .layer(.domain),

@@ -1,6 +1,8 @@
 import InnoRouter
+import InnoRouterMacros
 import SettingsFeatureInterface
 
-enum SettingsRoute: Route {
+@Routable
+enum SettingsRoute {
     case detail(FeatureTodo)
 }
