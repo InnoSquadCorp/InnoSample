@@ -1,6 +1,8 @@
 import InnoRouter
+import InnoRouterMacros
 import PostsFeatureInterface
 
-enum PostsRoute: Route {
+@Routable
+enum PostsRoute {
     case detail(FeaturePost)
 }

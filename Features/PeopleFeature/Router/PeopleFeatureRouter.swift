@@ -43,7 +43,7 @@ public final class PeopleFeatureCoordinator {
 
     func syncNavigationFromSelection() {
         guard let selectedUser = model.consumeSelectedUser() else { return }
-        navigationStore.send(.resetTo([.detail(selectedUser)]))
+        navigationStore.send(.replaceStack([PeopleRoute.detail(selectedUser)]))
     }
 
     func syncModalPresentation() {

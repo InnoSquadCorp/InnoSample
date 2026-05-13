@@ -1,10 +1,9 @@
-import CoreNetwork
 import Data
 
 public actor JSONPlaceholderUserRemoteDataSource: UserRemoteDataSourceProtocol {
-    private let transport: NetworkTransport
+    private let transport: RemoteTransport
 
-    public init(transport: NetworkTransport) {
+    init(transport: RemoteTransport) {
         self.transport = transport
     }
 

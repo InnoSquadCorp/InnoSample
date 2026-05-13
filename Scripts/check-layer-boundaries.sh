@@ -33,9 +33,9 @@ check_absent \
   "SwiftUI" "InnoFlow" "InnoRouter" "InnoNetwork"
 
 check_absent \
-  "App must not import lower layers directly" \
+  "App must not import layer implementation modules directly" \
   "$ROOT/App" \
-  "Domain" "Data" "Remote"
+  "Data" "Remote"
 
 check_absent \
   "App must not import leaf feature modules directly" \
@@ -45,7 +45,7 @@ check_absent \
 check_absent \
   "Features root composition must not import lower layers directly" \
   "$ROOT/Features/Sources" \
-  "Data" "Remote" "CoreNetwork" "Layers"
+  "Data" "Remote" "Layers"
 
 check_absent \
   "Features root must compose only router modules" \
@@ -57,17 +57,17 @@ for feature in PeopleFeature PostsFeature SettingsFeature EntireTabFeature; do
   check_absent \
     "${feature} Logic must not import UI or routing frameworks" \
     "$ROOT/Features/${feature}/Logics" \
-    "SwiftUI" "InnoRouter" "Data" "Remote" "CoreNetwork" "Layers"
+    "SwiftUI" "InnoRouter" "Data" "Remote" "Layers"
 
   check_absent \
     "${feature} UI must not import lower layers or router framework" \
     "$ROOT/Features/${feature}/UIs" \
-    "Domain" "Data" "Remote" "CoreNetwork" "Layers" "InnoRouter"
+    "Domain" "Data" "Remote" "Layers" "InnoRouter"
 
   check_absent \
     "${feature} Router must not import lower layers directly" \
     "$ROOT/Features/${feature}/Router" \
-    "Data" "Remote" "CoreNetwork" "Layers"
+    "Data" "Remote" "Layers"
 done
 
 check_absent \
@@ -88,7 +88,7 @@ check_absent \
 check_absent \
   "Domain must not import lower layers" \
   "$ROOT/Layers/Domain" \
-  "Data" "Remote" "CoreNetwork" "Layers"
+  "Data" "Remote" "Layers"
 
 check_absent \
   "Remote must not import Domain directly" \

@@ -1,7 +1,7 @@
 import Foundation
 import InnoNetwork
 
-public enum NetworkFailure: Error, Sendable, Equatable {
+enum RemoteFailure: Error, Sendable, Equatable {
     case invalidRequestConfiguration(String)
     case invalidStatus(code: Int, data: Data?, request: URLRequest?)
     case decoding(SendableUnderlyingError, data: Data?, request: URLRequest?)
@@ -11,69 +11,73 @@ public enum NetworkFailure: Error, Sendable, Equatable {
 
     init(networkError: NetworkError) {
         switch networkError {
-        case .invalidRequestConfiguration(let message):
-            self = .invalidRequestConfiguration(message)
+        case .configuration(reason: let reason):
+            switch reason {
+            case .invalidRequest(let message), .offline(let message):
+                self = .invalidRequestConfiguration(message)
+            case .invalidBaseURL(let string):
+                self = .transport(
+                    SendableUnderlyingError(
+                        domain: "com.innosquad.remote",
+                        code: NetworkErrorCode.configurationInvalidBaseURL.rawValue,
+                        message: "Invalid base URL: \(string)"
+                    ),
+                    request: nil
+                )
+            }
         case .statusCode(let response):
             self = .invalidStatus(
                 code: response.statusCode,
                 data: response.data,
                 request: response.request
             )
-        case .objectMapping(let error, let response):
+        case .decoding(_, let error, let response):
             self = .decoding(
                 error,
                 data: response.data,
                 request: response.request
             )
         case .underlying(let error, let response):
-            self = .transport(
-                error,
-                request: response?.request
-            )
-        case .nonHTTPResponse:
-            self = .invalidResponse(request: nil)
+            if error.code == NetworkErrorCode.nonHTTPResponse.rawValue {
+                self = .invalidResponse(request: response?.request)
+            } else {
+                self = .transport(error, request: response?.request)
+            }
+        case .reachability(_, let error, let response):
+            self = .transport(error, request: response?.request)
         case .cancelled:
             self = .cancelled(request: nil)
-        case .jsonMapping(let response):
+        case .timeout(_, let underlying):
             self = .transport(
-                SendableUnderlyingError(
-                    domain: "com.innosquad.corenetwork",
-                    code: response.statusCode,
-                    message: "JSON mapping failed."
-                ),
-                request: response.request
-            )
-        case .invalidBaseURL(let string):
-            self = .transport(
-                SendableUnderlyingError(
-                    domain: "com.innosquad.corenetwork",
-                    code: -1,
-                    message: "Invalid base URL: \(string)"
+                underlying ?? SendableUnderlyingError(
+                    domain: "com.innosquad.remote",
+                    code: NetworkErrorCode.timeout.rawValue,
+                    message: "Request timed out."
                 ),
                 request: nil
             )
         case .trustEvaluationFailed(let reason):
             self = .transport(
                 SendableUnderlyingError(
-                    domain: "com.innosquad.corenetwork",
-                    code: -1,
+                    domain: "com.innosquad.remote",
+                    code: NetworkErrorCode.trustEvaluationFailed.rawValue,
                     message: String(describing: reason)
                 ),
                 request: nil
             )
-        case .undefined:
+        @unknown default:
             self = .transport(
                 SendableUnderlyingError(
-                    domain: "com.innosquad.corenetwork",
+                    domain: "com.innosquad.remote",
                     code: -1,
-                    message: "Undefined network failure."
+                    message: "Undefined remote failure."
                 ),
                 request: nil
             )
         }
     }
 
-    public var isCancelled: Bool {
+    var isCancelled: Bool {
         if case .cancelled = self {
             return true
         }
@@ -81,8 +85,8 @@ public enum NetworkFailure: Error, Sendable, Equatable {
     }
 }
 
-extension NetworkFailure {
-    public static func == (lhs: NetworkFailure, rhs: NetworkFailure) -> Bool {
+extension RemoteFailure {
+    static func == (lhs: RemoteFailure, rhs: RemoteFailure) -> Bool {
         switch (lhs, rhs) {
         case let (.invalidRequestConfiguration(lhsMessage), .invalidRequestConfiguration(rhsMessage)):
             return lhsMessage == rhsMessage
@@ -111,21 +115,21 @@ extension NetworkFailure {
     }
 }
 
-extension NetworkFailure: LocalizedError {
-    public var errorDescription: String? {
+extension RemoteFailure: LocalizedError {
+    var errorDescription: String? {
         switch self {
         case .invalidRequestConfiguration(let message):
-            return "Invalid request configuration: \(message)"
+            return "Invalid remote request configuration: \(message)"
         case .invalidStatus(let code, _, _):
-            return "Unexpected status code: \(code)"
+            return "Unexpected remote status code: \(code)"
         case .decoding(let error, _, _):
-            return "Failed to decode response: \(error.message)"
+            return "Failed to decode remote response: \(error.message)"
         case .transport(let error, _):
             return error.message
         case .cancelled:
-            return "Request was cancelled"
+            return "Remote request was cancelled"
         case .invalidResponse:
-            return "Received a non-HTTP response."
+            return "Received a non-HTTP remote response."
         }
     }
 }

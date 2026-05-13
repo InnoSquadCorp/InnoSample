@@ -1,10 +1,10 @@
-import CoreNetwork
 import Data
+import InnoNetwork
 
 enum UserRemoteFactory {
-    static func make(networkTransport: NetworkTransport) -> any UserRemoteDataSourceProtocol {
+    static func make(networkClient: any NetworkClient) -> any UserRemoteDataSourceProtocol {
         JSONPlaceholderUserRemoteDataSource(
-            transport: networkTransport
+            transport: RemoteTransport(client: networkClient)
         ) as any UserRemoteDataSourceProtocol
     }
 }

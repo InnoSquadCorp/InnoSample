@@ -1,5 +1,7 @@
 import InnoRouter
+import InnoRouterMacros
 
-enum SettingsModalRoute: Route {
+@Routable
+enum SettingsModalRoute {
     case digest(completed: Int, total: Int)
 }

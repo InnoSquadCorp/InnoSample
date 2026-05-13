@@ -17,7 +17,7 @@ struct InnoSampleApp: App {
 
     var body: some Scene {
         WindowGroup {
-            FeatureRootScene(coordinator: container.featureContainer.coordinator)
+            container.featureContainerRootView()
         }
     }
 }
