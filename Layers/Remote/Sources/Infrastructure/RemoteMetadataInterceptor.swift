@@ -15,8 +15,9 @@ struct RemoteMetadataInterceptor: RequestInterceptor {
             request.setValue(value, forHTTPHeaderField: key)
         }
 
-        if request.value(forHTTPHeaderField: "X-Request-ID") == nil {
-            request.setValue(UUID().uuidString, forHTTPHeaderField: "X-Request-ID")
+        let requestIDHeader = HTTPHeaderName<SingleValueHeader>.sampleRequestID.rawValue
+        if request.value(forHTTPHeaderField: requestIDHeader) == nil {
+            request.setValue(UUID().uuidString, forHTTPHeaderField: requestIDHeader)
         }
 
         return request

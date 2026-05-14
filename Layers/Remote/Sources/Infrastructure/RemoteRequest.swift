@@ -9,7 +9,7 @@ extension RemoteRequest {
 
     var headers: HTTPHeaders {
         var headers = HTTPHeaders.default
-        headers.update(name: "X-Sample-Feature", value: featureName)
+        headers[.sampleFeature] = featureName
         return headers
     }
 
