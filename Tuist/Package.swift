@@ -12,6 +12,9 @@ let packageSettings = PackageSettings(
         "InnoFlow": .framework,
         "InnoNetwork": .framework,
         "InnoRouter": .framework,
+        "InnoRouterCore": .framework,
+        "InnoRouterSwiftUI": .framework,
+        "InnoRouterDeepLink": .framework,
     ]
 )
 #endif

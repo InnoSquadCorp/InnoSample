@@ -4,6 +4,8 @@ public extension Project {
     static func thirdParty(
         _ module: ThirdPartyModule,
         packages: [Package] = [],
+        destinations: Destinations = Manifest.defaultDestinations,
+        deploymentTargets: DeploymentTargets = Manifest.defaultDeploymentTargets,
         interfaceBuildableFolders: [BuildableFolder] = ["Interfaces"],
         interfaceDependencies: [TargetDependency] = [],
         buildableFolders: [BuildableFolder] = ["Sources"],
@@ -14,13 +16,19 @@ public extension Project {
         testDependencies: [TargetDependency] = [],
         schemes: [Scheme] = []
     ) -> Self {
+        // ThirdParty wrappers default to the iPhone / iPad / macOS triple
+        // because most SDK adapters in this sample are iOS-first. Callers
+        // that ship an SDK with broader platform support (tvOS, watchOS,
+        // visionOS) can opt in by passing `Manifest.sharedModuleDestinations`
+        // explicitly, but the default avoids forcing every wrapper to
+        // claim platform parity it does not actually exercise.
         let interfaceTargetName = "\(module.rawValue)Interface"
         let interfaceTarget = Target.target(
             name: interfaceTargetName,
-            destinations: Manifest.sharedModuleDestinations,
+            destinations: destinations,
             product: .framework,
             bundleId: "\(Manifest.bundlePrefix).\(module.bundleNamespace).interface",
-            deploymentTargets: Manifest.sharedModuleDeploymentTargets,
+            deploymentTargets: deploymentTargets,
             infoPlist: .default,
             buildableFolders: interfaceBuildableFolders,
             dependencies: interfaceDependencies
@@ -28,10 +36,10 @@ public extension Project {
 
         let implementationTarget = Target.target(
             name: module.rawValue,
-            destinations: Manifest.sharedModuleDestinations,
+            destinations: destinations,
             product: .staticLibrary,
             bundleId: "\(Manifest.bundlePrefix).\(module.bundleNamespace)",
-            deploymentTargets: Manifest.sharedModuleDeploymentTargets,
+            deploymentTargets: deploymentTargets,
             infoPlist: .default,
             resources: resources,
             buildableFolders: buildableFolders,
@@ -47,8 +55,8 @@ public extension Project {
                 testTarget(
                     targetName: module.rawValue,
                     bundleNamespace: module.bundleNamespace,
-                    destinations: Manifest.sharedModuleDestinations,
-                    deploymentTargets: Manifest.sharedModuleDeploymentTargets,
+                    destinations: destinations,
+                    deploymentTargets: deploymentTargets,
                     buildableFolders: testBuildableFolders,
                     dependencies: testDependencies
                 )

@@ -1,6 +1,6 @@
 # InnoSample Linkage Policy
 
-기준일: 2026-03-24
+기준일: 2026-05-13
 
 이 문서는 현재 `InnoSample` 모듈들의 `framework` / `static library` 선택 기준을 짧게 고정하는 문서입니다.
 
@@ -41,8 +41,24 @@
 - leaf implementation은 공개 surface보다 구현 공유 비용이 작고, static으로 둘 때 링크 전략이 단순해집니다.
 - `Layers` root는 과거 static일 때 duplicate-link 경고가 있었기 때문에 framework 유지가 baseline입니다.
 
+## External Package Product Types
+
+`Tuist/Package.swift`의 `PackageSettings.productTypes`는 Inno 계열 SPM product 중 **여러 leaf 모듈이 직접 또는 transitively 소비하는 모든 product를 `.framework`로 승격**합니다.
+
+- `InnoDI`, `InnoDISwiftUI`
+- `InnoFlow`
+- `InnoNetwork`
+- `InnoRouter`, `InnoRouterCore`, `InnoRouterSwiftUI`, `InnoRouterDeepLink`
+
+이유는 다음과 같습니다.
+
+- `InnoRouter` umbrella는 `InnoRouterCore / InnoRouterSwiftUI / InnoRouterDeepLink`에 의존합니다.
+- umbrella만 `.framework`로 두면 sub-target은 Tuist 기본값 `.staticFramework`로 빌드돼, dynamic umbrella가 sub-target 심볼을 정적 임베드합니다.
+- leaf `*Router` static library가 `import InnoRouter` 만 하더라도, umbrella의 `@_exported import`를 따라가면서 InnoRouterSwiftUI 심볼을 다시 정적으로 끌어옵니다.
+- 결과적으로 같은 ObjC class / Swift metadata가 dynamic umbrella 내부 사본과 leaf static 사본 양쪽에 등록돼 “Class is implemented in both …” warning이 발생합니다.
+- sub-product를 함께 `.framework`로 승격하면 각자 단일 dynamic artifact가 되어 dyld가 한 번만 로드합니다.
+
 ## Known Issue
 
-- `InnoRouterSwiftUI` duplicate class 경고는 아직 known issue입니다.
-- 현재 구조에선 leaf 구현 타깃을 static으로 둬도, 공통 dynamic dependency 배치에 따라 경고가 남을 수 있습니다.
-- 향후에는 truly shared dynamic artifact 전략 또는 더 엄격한 static/dynamic 재배치를 검토할 수 있습니다.
+- 현재 알려진 link warning 없음. `InnoRouterSwiftUI` duplicate class warning은 위 ProductTypes 조정으로 해소되었습니다.
+- 새로운 Inno 계열 sub-product를 import 하거나 transitively 의존하게 되면, 같은 패턴으로 `productTypes`에 `.framework`로 추가해야 합니다.

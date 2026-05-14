@@ -28,50 +28,34 @@ public struct LaunchScreenConfiguration {
 public struct WatchCompanionConfiguration {
     public let appName: String
     public let appBundleNamespace: String
-    public let extensionName: String
-    public let extensionBundleNamespace: String
     public let appDisplayName: String
-    public let extensionDisplayName: String
-    public let extensionBuildableFolders: [BuildableFolder]
+    public let buildableFolders: [BuildableFolder]
     public let appResources: ResourceFileElements?
-    public let extensionResources: ResourceFileElements?
-    public let extensionDependencies: [TargetDependency]
+    public let dependencies: [TargetDependency]
 
     public init(
         appName: String,
         appBundleNamespace: String,
-        extensionName: String,
-        extensionBundleNamespace: String,
         appDisplayName: String,
-        extensionDisplayName: String,
-        extensionBuildableFolders: [BuildableFolder] = ["WatchExtension/Sources"],
+        buildableFolders: [BuildableFolder] = ["WatchApp/Sources"],
         appResources: ResourceFileElements? = ["WatchApp/Resources/**"],
-        extensionResources: ResourceFileElements? = nil,
-        extensionDependencies: [TargetDependency] = []
+        dependencies: [TargetDependency] = []
     ) {
         self.appName = appName
         self.appBundleNamespace = appBundleNamespace
-        self.extensionName = extensionName
-        self.extensionBundleNamespace = extensionBundleNamespace
         self.appDisplayName = appDisplayName
-        self.extensionDisplayName = extensionDisplayName
-        self.extensionBuildableFolders = extensionBuildableFolders
+        self.buildableFolders = buildableFolders
         self.appResources = appResources
-        self.extensionResources = extensionResources
-        self.extensionDependencies = extensionDependencies
+        self.dependencies = dependencies
     }
 
     public static func `default`(
-        appName: String = "InnoSampleWatchApp",
-        extensionName: String = "InnoSampleWatchExtension"
+        appName: String = "InnoSampleWatchApp"
     ) -> Self {
         .init(
             appName: appName,
             appBundleNamespace: "app.watchkitapp",
-            extensionName: extensionName,
-            extensionBundleNamespace: "app.watchkitapp.watchkitextension",
-            appDisplayName: "InnoSample Watch",
-            extensionDisplayName: "InnoSample Watch Extension"
+            appDisplayName: "InnoSample Watch"
         )
     }
 }
