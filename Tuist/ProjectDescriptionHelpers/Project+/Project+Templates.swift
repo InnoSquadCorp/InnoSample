@@ -63,10 +63,18 @@ extension Project {
         configuration: WatchCompanionConfiguration,
         mainBundleId: String
     ) -> Target {
+        // Single-target SwiftUI watch app (watchOS 7+).
+        // The target uses `.app` product type rather than the legacy
+        // `.watch2App` because Tuist's `.watch2App` keeps the legacy
+        // "embed binary from extension" wrapping build phase, which
+        // collides with the modern flat layout and produces a
+        // "Multiple commands produce ... .app/<binary>" error.
+        // `WKApplication = true` plus the watchOS-only destination tells
+        // the installer this is a watchOS app.
         .target(
             name: configuration.appName,
             destinations: Manifest.watchOnlyDestinations,
-            product: .watch2App,
+            product: .app,
             bundleId: "\(Manifest.bundlePrefix).\(configuration.appBundleNamespace)",
             deploymentTargets: Manifest.watchDeploymentTargets,
             infoPlist: .extendingDefault(
@@ -77,29 +85,8 @@ extension Project {
                 ]
             ),
             resources: configuration.appResources,
-            dependencies: [
-                .target(name: configuration.extensionName)
-            ]
-        )
-    }
-
-    private static func watchExtensionTarget(
-        configuration: WatchCompanionConfiguration
-    ) -> Target {
-        .target(
-            name: configuration.extensionName,
-            destinations: Manifest.watchOnlyDestinations,
-            product: .watch2Extension,
-            bundleId: "\(Manifest.bundlePrefix).\(configuration.extensionBundleNamespace)",
-            deploymentTargets: Manifest.watchDeploymentTargets,
-            infoPlist: .extendingDefault(
-                with: [
-                    "CFBundleDisplayName": .string(configuration.extensionDisplayName),
-                ]
-            ),
-            resources: configuration.extensionResources,
-            buildableFolders: configuration.extensionBuildableFolders,
-            dependencies: configuration.extensionDependencies
+            buildableFolders: configuration.buildableFolders,
+            dependencies: configuration.dependencies
         )
     }
 
@@ -286,10 +273,7 @@ extension Project {
         }
 
         let watchTargets: [Target] = if let watchCompanion {
-            [
-                watchAppTarget(configuration: watchCompanion, mainBundleId: mainBundleId),
-                watchExtensionTarget(configuration: watchCompanion),
-            ]
+            [watchAppTarget(configuration: watchCompanion, mainBundleId: mainBundleId)]
         } else {
             []
         }

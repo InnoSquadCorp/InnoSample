@@ -1,5 +1,6 @@
 import XCTest
 
+@MainActor
 final class InnoSampleAppUITests: XCTestCase {
     func testAppLaunchesAndSupportsCoreFlows() {
         let app = XCUIApplication()
