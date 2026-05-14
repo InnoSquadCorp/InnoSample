@@ -14,5 +14,8 @@ public struct FeatureRootScene: View {
 
     public var body: some View {
         EntireTabRouteHost(coordinator: coordinator)
+            .onOpenURL { url in
+                coordinator.handleDeepLink(url)
+            }
     }
 }

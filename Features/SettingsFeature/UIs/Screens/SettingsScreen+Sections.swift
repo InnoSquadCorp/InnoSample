@@ -78,7 +78,16 @@ extension SettingsScreen {
 
     var preferencesQueueSection: some View {
         Section("Preferences Queue") {
-            ForEach(model.todos) { todo in
+            Toggle(
+                "Show completed only",
+                isOn: Binding(
+                    get: { model.showsCompletedOnly },
+                    set: { model.setShowsCompletedOnly($0) }
+                )
+            )
+            .accessibilityIdentifier("settings-shows-completed-only")
+
+            ForEach(model.showsCompletedOnly ? model.todos.filter(\.completed) : model.todos) { todo in
                 Button {
                     onSelect(todo)
                 } label: {
@@ -105,6 +114,7 @@ extension SettingsScreen {
             }
         }
     }
+
 
     @ViewBuilder
     var flowLogSection: some View {

@@ -15,10 +15,10 @@ final class PeopleFeatureTests: XCTestCase {
 
         model.loadIfNeeded()
         await waitUntil("people are loaded") {
-            model.people == PeopleFeatureFixtures.users && model.isLoading == false
+            Array(model.people) == PeopleFeatureFixtures.users && model.isLoading == false
         }
 
-        XCTAssertEqual(model.people, PeopleFeatureFixtures.users)
+        XCTAssertEqual(Array(model.people), PeopleFeatureFixtures.users)
         XCTAssertFalse(model.isLoading)
     }
 

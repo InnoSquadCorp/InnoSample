@@ -20,7 +20,7 @@ struct PeopleFeatureReducer {
         var phase: Phase = .idle
         var isLoading = false
         var hasLoaded = false
-        var people: [UserSummary] = []
+        var people: IdentifiedArrayOf<UserSummary> = IdentifiedArrayOf<UserSummary>()
         var errorMessage: String?
         var selectedUser: UserSummary?
         var pendingOverviewRequest: PeopleOverviewRequest?
@@ -90,10 +90,10 @@ struct PeopleFeatureReducer {
             case .peopleLoaded(let people):
                 state.isLoading = false
                 state.hasLoaded = true
-                state.people = people
+                state.people = IdentifiedArrayOf(uniqueElements: people)
                 state.activityLog.append("loaded \(people.count) people")
                 if let pendingExternalUserID = state.pendingExternalUserID,
-                   let user = people.first(where: { $0.id == pendingExternalUserID }) {
+                   let user = state.people[id: pendingExternalUserID] {
                     state.selectedUser = user
                     state.pendingExternalUserID = nil
                     state.activityLog.append("resolved queued external navigation for user #\(pendingExternalUserID)")
@@ -113,7 +113,7 @@ struct PeopleFeatureReducer {
 
             case .showOverview:
                 guard !state.people.isEmpty else { return .none }
-                state.pendingOverviewRequest = PeopleOverviewRequest(users: state.people)
+                state.pendingOverviewRequest = PeopleOverviewRequest(users: state.people.values)
                 state.activityLog.append("overview modal requested")
                 return .none
 
@@ -123,7 +123,7 @@ struct PeopleFeatureReducer {
                 return .none
 
             case .openUserDetail(let userID):
-                if let user = state.people.first(where: { $0.id == userID }) {
+                if let user = state.people[id: userID] {
                     state.selectedUser = user
                     state.pendingExternalUserID = nil
                     state.activityLog.append("external navigation applied for user #\(userID)")

@@ -4,11 +4,18 @@ import Observation
 import PeopleFeatureInterface
 import PeopleFeatureLogic
 
+/// PeopleFeature uses `FlowStore<PeopleRoute>` instead of separate
+/// `NavigationStore` + `ModalStore` instances. `FlowStore` exposes a
+/// unified `path: [RouteStep<PeopleRoute>]` projection plus a single
+/// `send(FlowIntent<PeopleRoute>)` dispatch entry, so push (`.detail`) and
+/// sheet (`.overview`) intents flow through one call site. Posts and
+/// Settings keep the two-store shape on purpose so the sample documents
+/// both patterns side by side; see `Docs/ArchitectureReview.md` for the
+/// adoption guidance.
 @MainActor
 @Observable
 public final class PeopleFeatureCoordinator {
-    let navigationStore = NavigationStore<PeopleRoute>()
-    let modalStore = ModalStore<PeopleModalRoute>()
+    let flowStore = FlowStore<PeopleRoute>()
     let model: PeopleFeatureModel
 
     init(input: PeopleFeatureInput) {
@@ -34,38 +41,45 @@ public final class PeopleFeatureCoordinator {
     public func showDetail(userID: Int) {
         model.openUserDetail(userID: userID)
         model.loadIfNeeded()
-        syncNavigationFromSelection()
-        Task { @MainActor [weak self] in
-            guard let self else { return }
-            await self.syncDeferredNavigation()
+        if !syncNavigationFromSelection() {
+            awaitDeferredSelection()
         }
     }
 
-    func syncNavigationFromSelection() {
-        guard let selectedUser = model.consumeSelectedUser() else { return }
-        navigationStore.send(.replaceStack([PeopleRoute.detail(selectedUser)]))
+    @discardableResult
+    func syncNavigationFromSelection() -> Bool {
+        guard let selectedUser = model.consumeSelectedUser() else { return false }
+        flowStore.send(.replaceStack([.detail(selectedUser)]))
+        return true
     }
 
     func syncModalPresentation() {
         guard let users = model.consumeOverviewUsers() else { return }
-        modalStore.send(.present(.overview(users), style: .sheet))
+        flowStore.send(.presentSheet(.overview(users)))
     }
 
     public func consumeSettingsRequest() -> OpenSettingsRequest? {
         model.consumeSettingsRequest()
     }
 
-    private func syncDeferredNavigation() async {
-        for _ in 0..<50 {
-            if selectedUserID != nil {
-                syncNavigationFromSelection()
-                return
+    private var deferredSelectionTask: Task<Void, Never>?
+
+    private func awaitDeferredSelection() {
+        deferredSelectionTask?.cancel()
+        deferredSelectionTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            while !Task.isCancelled, self.model.selectedUserID == nil {
+                await withCheckedContinuation { (cont: CheckedContinuation<Void, Never>) in
+                    withObservationTracking {
+                        _ = self.model.selectedUserID
+                    } onChange: {
+                        Task { @MainActor in cont.resume() }
+                    }
+                }
             }
-
-            await Task.yield()
-            try? await Task.sleep(nanoseconds: 10_000_000)
+            if !Task.isCancelled {
+                _ = self.syncNavigationFromSelection()
+            }
         }
-
-        syncNavigationFromSelection()
     }
 }

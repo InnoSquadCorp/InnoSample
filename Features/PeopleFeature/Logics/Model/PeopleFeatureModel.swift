@@ -2,6 +2,7 @@ import Domain
 import InnoFlow
 import Observation
 import PeopleFeatureInterface
+import os
 
 @MainActor
 @Observable
@@ -12,11 +13,25 @@ public final class PeopleFeatureModel {
         self.store = Store(
             reducer: PeopleFeatureReducer(
                 dependencies: .init(loadPeople: loadPeople)
-            )
+            ),
+            instrumentation: Self.makeInstrumentation()
         )
     }
 
-    public var people: [UserSummary] { store.people }
+    private static func makeInstrumentation() -> StoreInstrumentation<PeopleFeatureReducer.Action> {
+        #if DEBUG
+        let logger = Logger(subsystem: "com.innosquad.InnoSample", category: "PeopleFeature")
+        let signposter = OSSignposter(subsystem: "com.innosquad.InnoSample", category: "PeopleFeature")
+        return .combined(
+            .osLog(logger: logger, includeActions: true),
+            .signpost(signposter: signposter, name: "PeopleFeature.run", includeActions: true)
+        )
+        #else
+        return .disabled
+        #endif
+    }
+
+    public var people: IdentifiedArrayOf<UserSummary> { store.people }
     public var isLoading: Bool { store.isLoading }
     public var errorMessage: String? { store.errorMessage }
     public var activityLog: [String] { store.activityLog }
