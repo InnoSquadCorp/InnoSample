@@ -31,7 +31,7 @@ public struct SettingsFeatureRouteHost: View {
                 )
             }
         }
-        .onChange(of: coordinator.selectedTodoID, initial: false) { _, _ in
+        .onChange(of: coordinator.selectedTodoID, initial: true) { _, _ in
             coordinator.syncNavigationFromSelection()
         }
         .onChange(of: coordinator.pendingDigestToken, initial: false) { _, _ in

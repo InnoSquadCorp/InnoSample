@@ -58,6 +58,69 @@ final class EntireTabFeatureTests: XCTestCase {
         )
     }
 
+    func testDeepLinkMatcherResolvesSettingsAssigneeID() {
+        let matcher = SampleDeepLinkMatcherFactory.make()
+
+        XCTAssertEqual(
+            matcher.match(URL(string: "innosample://host/settings/3")!),
+            .settingsDetail(assigneeID: 3)
+        )
+        XCTAssertEqual(
+            matcher.match(URL(string: "innosample://host/people/42")!),
+            .peopleDetail(userID: 42)
+        )
+    }
+
+    func testDeepLinkMatcherRejectsUnknownPathsAndNonNumericIDs() {
+        let matcher = SampleDeepLinkMatcherFactory.make()
+
+        XCTAssertNil(matcher.match(URL(string: "innosample://host/unknown")!))
+        XCTAssertNil(matcher.match(URL(string: "innosample://host/settings/not-a-number")!))
+        XCTAssertNil(matcher.match(URL(string: "innosample://host/people")!))
+    }
+
+    func testHandleDeepLinkSwitchesTabAndPushesSettingsDetail() async {
+        let coordinator = EntireTabCoordinator(
+            peopleCoordinator: .init(
+                input: .init(fetchPeopleUseCase: FetchPeopleUseCase(repository: StubUserRepository(users: Self.users)))
+            ),
+            postsCoordinator: .init(
+                input: .init(fetchPostsUseCase: FetchPostsUseCase(repository: StubPostRepository(posts: Self.posts)))
+            ),
+            settingsCoordinator: .init(
+                input: .init(fetchTodosUseCase: FetchTodosUseCase(repository: StubTodoRepository(todos: Self.todos)))
+            )
+        )
+        EntireTabFeatureTestRetainer.retain(coordinator)
+
+        let handled = coordinator.handleDeepLink(URL(string: "innosample://host/settings/1")!)
+        XCTAssertTrue(handled)
+
+        await waitUntil("settings detail is shown") {
+            coordinator.settingsCoordinator.navigationStore.state.path == [SettingsRoute.detail(Self.todos[0])]
+        }
+
+        XCTAssertEqual(coordinator.selectedTab, SampleTab.settings)
+    }
+
+    func testHandleDeepLinkRejectsForeignScheme() {
+        let coordinator = EntireTabCoordinator(
+            peopleCoordinator: .init(
+                input: .init(fetchPeopleUseCase: FetchPeopleUseCase(repository: StubUserRepository(users: Self.users)))
+            ),
+            postsCoordinator: .init(
+                input: .init(fetchPostsUseCase: FetchPostsUseCase(repository: StubPostRepository(posts: Self.posts)))
+            ),
+            settingsCoordinator: .init(
+                input: .init(fetchTodosUseCase: FetchTodosUseCase(repository: StubTodoRepository(todos: Self.todos)))
+            )
+        )
+        EntireTabFeatureTestRetainer.retain(coordinator)
+
+        XCTAssertFalse(coordinator.handleDeepLink(URL(string: "https://host/settings/1")!))
+        XCTAssertEqual(coordinator.selectedTab, SampleTab.people)
+    }
+
     func testCoordinatorMediatesSettingsToPeopleNavigation() async {
         let coordinator = EntireTabCoordinator(
             peopleCoordinator: .init(
@@ -76,13 +139,13 @@ final class EntireTabFeatureTests: XCTestCase {
         coordinator.syncCrossFeatureNavigationFromSettings()
 
         await waitUntil("people detail is shown") {
-            coordinator.peopleCoordinator.navigationStore.state.path == [PeopleRoute.detail(Self.users[0])]
+            coordinator.peopleCoordinator.flowStore.path == [.push(.detail(Self.users[0]))]
         }
 
         XCTAssertEqual(coordinator.selectedTab, SampleTab.people)
         XCTAssertEqual(
-            coordinator.peopleCoordinator.navigationStore.state.path,
-            [PeopleRoute.detail(Self.users[0])]
+            coordinator.peopleCoordinator.flowStore.path,
+            [.push(.detail(Self.users[0]))]
         )
     }
 

@@ -34,16 +34,16 @@ public final class SettingsFeatureCoordinator {
     public func showDetail(assigneeID: Int) {
         model.openTodoDetail(forAssigneeID: assigneeID)
         model.loadIfNeeded()
-        syncNavigationFromSelection()
-        Task { @MainActor [weak self] in
-            guard let self else { return }
-            await self.syncDeferredNavigation()
+        if !syncNavigationFromSelection() {
+            awaitDeferredSelection()
         }
     }
 
-    func syncNavigationFromSelection() {
-        guard let selectedTodo = model.consumeSelectedTodo() else { return }
+    @discardableResult
+    func syncNavigationFromSelection() -> Bool {
+        guard let selectedTodo = model.consumeSelectedTodo() else { return false }
         navigationStore.send(.replaceStack([SettingsRoute.detail(selectedTodo)]))
+        return true
     }
 
     func syncModalPresentation() {
@@ -60,17 +60,24 @@ public final class SettingsFeatureCoordinator {
         model.consumePeopleRequest()
     }
 
-    private func syncDeferredNavigation() async {
-        for _ in 0..<50 {
-            if selectedTodoID != nil {
-                syncNavigationFromSelection()
-                return
+    private var deferredSelectionTask: Task<Void, Never>?
+
+    private func awaitDeferredSelection() {
+        deferredSelectionTask?.cancel()
+        deferredSelectionTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            while !Task.isCancelled, self.model.selectedTodoID == nil {
+                await withCheckedContinuation { (cont: CheckedContinuation<Void, Never>) in
+                    withObservationTracking {
+                        _ = self.model.selectedTodoID
+                    } onChange: {
+                        Task { @MainActor in cont.resume() }
+                    }
+                }
             }
-
-            await Task.yield()
-            try? await Task.sleep(nanoseconds: 10_000_000)
+            if !Task.isCancelled {
+                _ = self.syncNavigationFromSelection()
+            }
         }
-
-        syncNavigationFromSelection()
     }
 }

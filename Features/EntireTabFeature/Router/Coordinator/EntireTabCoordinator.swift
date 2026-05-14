@@ -51,6 +51,26 @@ public final class EntireTabCoordinator: TabCoordinator {
         peopleCoordinator.showDetail(userID: request.userID)
     }
 
+    @discardableResult
+    public func handleDeepLink(_ url: URL) -> Bool {
+        guard url.scheme == SampleDeepLinkMatcherFactory.allowedScheme else { return false }
+        guard let link = SampleDeepLinkMatcherFactory.make().match(url) else { return false }
+        dispatch(link)
+        return true
+    }
+
+    func dispatch(_ link: SampleDeepLink) {
+        switch link {
+        case .peopleDetail(let userID):
+            selectedTab = .people
+            peopleCoordinator.showDetail(userID: userID)
+
+        case .settingsDetail(let assigneeID):
+            selectedTab = .settings
+            settingsCoordinator.showDetail(assigneeID: assigneeID)
+        }
+    }
+
     public func content(for tab: SampleTab) -> AnyView {
         switch tab {
         case .people:

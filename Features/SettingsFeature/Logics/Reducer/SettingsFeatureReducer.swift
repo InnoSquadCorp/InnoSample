@@ -27,6 +27,7 @@ struct SettingsFeatureReducer {
         var pendingPeopleRequest: SettingsPeopleRequest?
         var pendingExternalAssigneeID: Int?
         var activityLog: [String] = []
+        @BindableField var showsCompletedOnly = false
 
         init() {}
     }
@@ -43,6 +44,7 @@ struct SettingsFeatureReducer {
         case clearSelection
         case clearDigestRequest
         case clearPeopleRequest
+        case setShowsCompletedOnly(Bool)
     }
 
     let dependencies: Dependencies
@@ -146,6 +148,11 @@ struct SettingsFeatureReducer {
 
             case .clearPeopleRequest:
                 state.pendingPeopleRequest = nil
+                return .none
+
+            case .setShowsCompletedOnly(let value):
+                state.showsCompletedOnly = value
+                state.activityLog.append("completed filter set to \(value)")
                 return .none
             }
         }

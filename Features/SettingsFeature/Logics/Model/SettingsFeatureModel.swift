@@ -23,8 +23,12 @@ public final class SettingsFeatureModel {
     public var selectedTodoID: Int? { store.selectedTodo?.id }
     public var pendingDigestToken: UUID? { store.pendingDigestRequest?.id }
     public var pendingPeopleRequestID: UUID? { store.pendingPeopleRequest?.id }
+    public var showsCompletedOnly: Bool { store.showsCompletedOnly }
 
     public func loadIfNeeded() { store.send(.onAppear) }
+    public func setShowsCompletedOnly(_ value: Bool) {
+        store.send(.setShowsCompletedOnly(value))
+    }
     public func refresh() { store.send(.refresh) }
     public func select(_ todo: TodoSummary) { store.send(.select(todo)) }
     public func showDigest() { store.send(.showDigest) }
