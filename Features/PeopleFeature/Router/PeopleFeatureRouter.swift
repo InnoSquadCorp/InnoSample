@@ -9,9 +9,8 @@ import PeopleFeatureLogic
 /// unified `path: [RouteStep<PeopleRoute>]` projection plus a single
 /// `send(FlowIntent<PeopleRoute>)` dispatch entry, so push (`.detail`) and
 /// sheet (`.overview`) intents flow through one call site. Posts and
-/// Settings keep the two-store shape on purpose so the sample documents
-/// both patterns side by side; see `Docs/ArchitectureReview.md` for the
-/// adoption guidance.
+/// Settings document the current split-view and flow surfaces; see
+/// `Docs/ArchitectureReview.md` for the adoption guidance.
 @MainActor
 @Observable
 public final class PeopleFeatureCoordinator {
@@ -20,6 +19,10 @@ public final class PeopleFeatureCoordinator {
 
     init(input: PeopleFeatureInput) {
         self.model = PeopleFeatureModel(loadPeople: input.fetchPeopleUseCase.callAsFunction)
+    }
+
+    isolated deinit {
+        deferredSelectionTask?.cancel()
     }
 
     var selectedUserID: Int? { model.selectedUserID }
@@ -67,19 +70,74 @@ public final class PeopleFeatureCoordinator {
     private func awaitDeferredSelection() {
         deferredSelectionTask?.cancel()
         deferredSelectionTask = Task { @MainActor [weak self] in
-            guard let self else { return }
-            while !Task.isCancelled, self.model.selectedUserID == nil {
-                await withCheckedContinuation { (cont: CheckedContinuation<Void, Never>) in
-                    withObservationTracking {
-                        _ = self.model.selectedUserID
-                    } onChange: {
-                        Task { @MainActor in cont.resume() }
-                    }
+            while !Task.isCancelled {
+                guard self != nil else { return }
+                guard self?.selectedUserID == nil else { break }
+                await Self.waitForSelectionChange {
+                    [weak self] in self?.selectedUserID
                 }
             }
-            if !Task.isCancelled {
+            if !Task.isCancelled, let self {
                 _ = self.syncNavigationFromSelection()
             }
         }
+    }
+
+    private static func waitForSelectionChange(
+        _ readSelection: @escaping @MainActor () -> Int?
+    ) async {
+        let waiter = DeferredObservationWaiter()
+        await withTaskCancellationHandler {
+            await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+                waiter.install(continuation)
+                withObservationTracking {
+                    _ = readSelection()
+                } onChange: {
+                    waiter.resume()
+                }
+                if Task.isCancelled {
+                    waiter.resume()
+                }
+            }
+        } onCancel: {
+            waiter.resume()
+        }
+    }
+}
+
+private final class DeferredObservationWaiter: @unchecked Sendable {
+    private let lock = NSLock()
+    private var continuation: CheckedContinuation<Void, Never>?
+    private var isResolved = false
+
+    func install(_ continuation: CheckedContinuation<Void, Never>) {
+        let shouldResume: Bool
+        lock.lock()
+        if isResolved {
+            shouldResume = true
+        } else {
+            self.continuation = continuation
+            shouldResume = false
+        }
+        lock.unlock()
+
+        if shouldResume {
+            continuation.resume()
+        }
+    }
+
+    func resume() {
+        let continuation: CheckedContinuation<Void, Never>?
+        lock.lock()
+        if isResolved {
+            continuation = nil
+        } else {
+            isResolved = true
+            continuation = self.continuation
+            self.continuation = nil
+        }
+        lock.unlock()
+
+        continuation?.resume()
     }
 }

@@ -2,30 +2,51 @@ import Foundation
 import InnoNetwork
 
 enum RemoteClientFactory {
+    private static let authenticatedPaths: Set<String> = ["/todos"]
+
     static func makeTransport(
         baseURL: URL,
         session: URLSessionProtocol = URLSession.shared,
-        tokenStore: RemoteTokenStore = RemoteTokenStore()
+        tokenStore: RemoteTokenStore = RemoteTokenStore(),
+        responseCache: (any ResponseCache)? = nil
     ) -> RemoteTransport {
         RemoteTransport(
-            client: makeClient(baseURL: baseURL, session: session, tokenStore: tokenStore)
+            client: makeClient(
+                baseURL: baseURL,
+                session: session,
+                tokenStore: tokenStore,
+                responseCache: responseCache
+            )
         )
     }
 
     static func makeClient(
         baseURL: URL,
         session: URLSessionProtocol = URLSession.shared,
-        tokenStore: RemoteTokenStore = RemoteTokenStore()
+        tokenStore: RemoteTokenStore = RemoteTokenStore(),
+        responseCache: (any ResponseCache)? = nil
     ) -> any NetworkClient {
         let environment = RemoteEnvironment(baseURL: baseURL)
-        return makeClient(environment: environment, session: session, tokenStore: tokenStore)
+        return makeClient(
+            environment: environment,
+            session: session,
+            tokenStore: tokenStore,
+            responseCache: responseCache
+        )
     }
 
     static func makeClient(
         environment: RemoteEnvironment,
         session: URLSessionProtocol = URLSession.shared,
-        tokenStore: RemoteTokenStore = RemoteTokenStore()
+        tokenStore: RemoteTokenStore = RemoteTokenStore(),
+        responseCache: (any ResponseCache)? = nil
     ) -> any NetworkClient {
+        let cache = responseCache.map {
+            CachePack(
+                responseCachePolicy: .rfc9111Compliant(wrapping: .cacheFirst(maxAge: .seconds(300))),
+                responseCache: $0
+            )
+        } ?? CachePack()
         let configuration = NetworkConfiguration.advanced(
             baseURL: environment.baseURL,
             resilience: ResiliencePack(
@@ -48,6 +69,7 @@ enum RemoteClientFactory {
                     RemoteStatusInterceptor(),
                 ]
             ),
+            cache: cache,
             transport: TransportPack(
                 timeout: 20.0,
                 cachePolicy: .reloadIgnoringLocalCacheData
@@ -64,8 +86,13 @@ enum RemoteClientFactory {
         tokenStore: RemoteTokenStore
     ) -> RefreshTokenPolicy {
         RefreshTokenPolicy(
+            appliesTo: isAuthRequiredRequest,
             currentToken: { await tokenStore.token() },
             refreshToken: { await tokenStore.rotateToken() }
         )
+    }
+
+    private static func isAuthRequiredRequest(_ request: URLRequest) -> Bool {
+        request.url.map { authenticatedPaths.contains($0.path) } ?? false
     }
 }

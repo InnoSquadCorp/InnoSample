@@ -20,7 +20,7 @@ final class RemoteTransportTests: XCTestCase {
         XCTAssertNotNil(request?.value(forHTTPHeaderField: "Accept-Encoding"))
         XCTAssertEqual(request?.value(forHTTPHeaderField: "User-Agent"), "InnoSample/1.0.0 (\(RemotePlatformInfo.name))")
         XCTAssertEqual(request?.value(forHTTPHeaderField: "X-Sample-Feature"), "People")
-        XCTAssertNotNil(request?.value(forHTTPHeaderField: "X-Request-ID"))
+        XCTAssertNil(request?.value(forHTTPHeaderField: "X-Request-ID"))
     }
 
     func testSendMapsStatusCodeFailureToRemoteFailure() async throws {

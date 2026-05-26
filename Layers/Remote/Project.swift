@@ -5,11 +5,13 @@ let project = Project.leafLayer(
     .remote,
     dependencies: [
         .layer(.data),
-        .package(.innoNetwork)
+        .package(.innoNetwork),
+        .package(.innoNetworkPersistentCache)
     ],
     testBuildableFolders: ["Tests"],
     testDependencies: [
-        .package(.innoNetwork)
+        .package(.innoNetwork),
+        .package(.innoNetworkPersistentCache)
     ],
     schemes: [
         Project.moduleScheme(

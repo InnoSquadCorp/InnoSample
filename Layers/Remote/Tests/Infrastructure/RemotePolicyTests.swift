@@ -110,9 +110,38 @@ final class RemotePolicyTests: XCTestCase {
         XCTAssertEqual(requests.count, 2)
         for request in requests {
             XCTAssertEqual(request.value(forHTTPHeaderField: "X-Sample-Feature"), "People")
-            XCTAssertNotNil(request.value(forHTTPHeaderField: "X-Request-ID"))
+            XCTAssertNil(request.value(forHTTPHeaderField: "X-Request-ID"))
+            XCTAssertNil(request.value(forHTTPHeaderField: "Authorization"))
             XCTAssertNotNil(request.value(forHTTPHeaderField: "User-Agent"))
         }
+    }
+
+    func testResponseCacheReusesStableMetadataHeaders() async throws {
+        let session = SequencedStubURLSession(sequences: [
+            "/users": [
+                .init(
+                    statusCode: 200,
+                    data: Self.usersFixture,
+                    headers: ["Cache-Control": "max-age=60"]
+                )
+            ]
+        ])
+        let cache = InMemoryResponseCache()
+        let transport = RemoteClientFactory.makeTransport(
+            baseURL: baseURL,
+            session: session,
+            responseCache: cache
+        )
+
+        _ = try await transport.send(FetchUsersRequest())
+        _ = try await transport.send(FetchUsersRequest())
+
+        let callCount = await session.callCount(forPath: "/users")
+        XCTAssertEqual(
+            callCount,
+            1,
+            "stable public request headers should allow the second GET to hit response cache"
+        )
     }
 
     func testAuthRequiredRequestAttachesBearerTokenAndRefreshesOn401() async throws {

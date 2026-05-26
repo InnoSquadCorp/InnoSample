@@ -7,3 +7,5 @@
 **/*.xcworkspace/xcuserdata/
 **/xcuserdata/
 **/*.xcuserstate
+/Package.resolved
+/.package.resolved

@@ -7,12 +7,18 @@ import SettingsFeatureLogic
 @MainActor
 @Observable
 public final class SettingsFeatureCoordinator {
-    let navigationStore = NavigationStore<SettingsRoute>()
-    let modalStore = ModalStore<SettingsModalRoute>()
+    /// SettingsFeature uses `FlowStore` as its single routing authority.
+    /// Push detail and digest sheet routes are projected through the same
+    /// flow path so tests and telemetry can read one current surface.
+    let flowStore = FlowStore<SettingsRoute>()
     let model: SettingsFeatureModel
 
     init(input: SettingsFeatureInput) {
         self.model = SettingsFeatureModel(loadTodos: input.fetchTodosUseCase.callAsFunction)
+    }
+
+    isolated deinit {
+        deferredSelectionTask?.cancel()
     }
 
     var selectedTodoID: Int? { model.selectedTodoID }
@@ -42,18 +48,13 @@ public final class SettingsFeatureCoordinator {
     @discardableResult
     func syncNavigationFromSelection() -> Bool {
         guard let selectedTodo = model.consumeSelectedTodo() else { return false }
-        navigationStore.send(.replaceStack([SettingsRoute.detail(selectedTodo)]))
+        flowStore.send(.replaceStack([.detail(selectedTodo)]))
         return true
     }
 
     func syncModalPresentation() {
         guard let request = model.consumeDigestRequest() else { return }
-        modalStore.send(
-            .present(
-                .digest(completed: request.completed, total: request.total),
-                style: .sheet
-            )
-        )
+        flowStore.send(.presentSheet(.digest(completed: request.completed, total: request.total)))
     }
 
     public func consumePeopleRequest() -> OpenPeopleRequest? {
@@ -65,19 +66,74 @@ public final class SettingsFeatureCoordinator {
     private func awaitDeferredSelection() {
         deferredSelectionTask?.cancel()
         deferredSelectionTask = Task { @MainActor [weak self] in
-            guard let self else { return }
-            while !Task.isCancelled, self.model.selectedTodoID == nil {
-                await withCheckedContinuation { (cont: CheckedContinuation<Void, Never>) in
-                    withObservationTracking {
-                        _ = self.model.selectedTodoID
-                    } onChange: {
-                        Task { @MainActor in cont.resume() }
-                    }
+            while !Task.isCancelled {
+                guard self != nil else { return }
+                guard self?.selectedTodoID == nil else { break }
+                await Self.waitForSelectionChange {
+                    [weak self] in self?.selectedTodoID
                 }
             }
-            if !Task.isCancelled {
+            if !Task.isCancelled, let self {
                 _ = self.syncNavigationFromSelection()
             }
         }
+    }
+
+    private static func waitForSelectionChange(
+        _ readSelection: @escaping @MainActor () -> Int?
+    ) async {
+        let waiter = DeferredObservationWaiter()
+        await withTaskCancellationHandler {
+            await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+                waiter.install(continuation)
+                withObservationTracking {
+                    _ = readSelection()
+                } onChange: {
+                    waiter.resume()
+                }
+                if Task.isCancelled {
+                    waiter.resume()
+                }
+            }
+        } onCancel: {
+            waiter.resume()
+        }
+    }
+}
+
+private final class DeferredObservationWaiter: @unchecked Sendable {
+    private let lock = NSLock()
+    private var continuation: CheckedContinuation<Void, Never>?
+    private var isResolved = false
+
+    func install(_ continuation: CheckedContinuation<Void, Never>) {
+        let shouldResume: Bool
+        lock.lock()
+        if isResolved {
+            shouldResume = true
+        } else {
+            self.continuation = continuation
+            shouldResume = false
+        }
+        lock.unlock()
+
+        if shouldResume {
+            continuation.resume()
+        }
+    }
+
+    func resume() {
+        let continuation: CheckedContinuation<Void, Never>?
+        lock.lock()
+        if isResolved {
+            continuation = nil
+        } else {
+            isResolved = true
+            continuation = self.continuation
+            self.continuation = nil
+        }
+        lock.unlock()
+
+        continuation?.resume()
     }
 }

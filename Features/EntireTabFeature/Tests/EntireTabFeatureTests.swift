@@ -48,13 +48,13 @@ final class EntireTabFeatureTests: XCTestCase {
         coordinator.syncCrossFeatureNavigationFromPeople()
 
         await waitUntil("settings detail is shown") {
-            coordinator.settingsCoordinator.navigationStore.state.path == [SettingsRoute.detail(Self.todos[0])]
+            coordinator.settingsCoordinator.flowStore.path == [.push(.detail(Self.todos[0]))]
         }
 
         XCTAssertEqual(coordinator.selectedTab, SampleTab.settings)
         XCTAssertEqual(
-            coordinator.settingsCoordinator.navigationStore.state.path,
-            [SettingsRoute.detail(Self.todos[0])]
+            coordinator.settingsCoordinator.flowStore.path,
+            [.push(.detail(Self.todos[0]))]
         )
     }
 
@@ -97,7 +97,7 @@ final class EntireTabFeatureTests: XCTestCase {
         XCTAssertTrue(handled)
 
         await waitUntil("settings detail is shown") {
-            coordinator.settingsCoordinator.navigationStore.state.path == [SettingsRoute.detail(Self.todos[0])]
+            coordinator.settingsCoordinator.flowStore.path == [.push(.detail(Self.todos[0]))]
         }
 
         XCTAssertEqual(coordinator.selectedTab, SampleTab.settings)

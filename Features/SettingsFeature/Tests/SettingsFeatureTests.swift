@@ -34,6 +34,28 @@ final class SettingsFeatureTests: XCTestCase {
         coordinator.syncNavigationFromSelection()
 
         XCTAssertNil(coordinator.selectedTodoID)
+        XCTAssertEqual(coordinator.flowStore.path, [.push(.detail(SettingsFeatureFixtures.todos[0]))])
+    }
+
+    func testCoordinatorPresentsDigestThroughFlowStore() async {
+        let coordinator = SettingsFeatureCoordinator(
+            input: SettingsFeatureInput(
+                fetchTodosUseCase: FetchTodosUseCase(repository: StubTodoRepository())
+            )
+        )
+        SettingsFeatureTestRetainer.retain(coordinator)
+
+        coordinator.model.loadIfNeeded()
+        await waitUntil("todos are loaded before presenting digest") {
+            coordinator.model.todos == SettingsFeatureFixtures.todos
+        }
+        coordinator.showDigest()
+        coordinator.syncModalPresentation()
+
+        XCTAssertEqual(
+            coordinator.flowStore.currentModalRoute,
+            .digest(completed: 0, total: SettingsFeatureFixtures.todos.count)
+        )
     }
 
     func testCoordinatorEmitsOneShotPeopleRequest() {

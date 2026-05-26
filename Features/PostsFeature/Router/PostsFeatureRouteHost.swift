@@ -10,15 +10,8 @@ public struct PostsFeatureRouteHost: View {
     }
 
     public var body: some View {
-        // PostsFeature uses `NavigationSplitHost` rather than
-        // `NavigationHost` because Posts is a long list-detail surface that
-        // benefits from sidebar + detail on iPad / macOS. SwiftUI collapses
-        // `NavigationSplitView` to a stack on horizontally-compact iPhone
-        // automatically, so the same host renders correctly on phones with
-        // the existing "tap row → push detail" interaction. PeopleFeature
-        // stays on `FlowHost` and SettingsFeature on `NavigationHost` so
-        // the sample documents all three shapes side by side; see
-        // `Docs/ArchitectureReview.md` for the adoption guidance.
+        // PostsFeature is the split-view sample: NavigationSplitHost is the
+        // canonical InnoRouter surface for long list-detail features.
         ModalHost(store: coordinator.modalStore) { route in
             switch route {
             case .highlights(let posts):
