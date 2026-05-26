@@ -13,7 +13,7 @@
 - `App -> Layers + Features + ThirdParty`
 
 `InnoDI`, `InnoFlow`, `InnoNetwork`, `InnoRouter`를 쓰는 각 모듈은 독립 `Project.swift`로 관리하고, 루트는 `Workspace.swift`로 조립합니다.  
-Inno 라이브러리 의존성은 로컬 path package가 아니라 `Tuist/Package.swift`에서 관리하는 remote package + exact version 고정 방식으로 소비합니다.
+Inno 라이브러리 의존성은 로컬 path package가 아니라 `Tuist/Package.swift`에서 관리하는 remote package + exact version 고정 방식으로 소비합니다. 현재 기준 pin은 `InnoDI 4.3.0`, `InnoFlow 4.0.0`, `InnoNetwork 4.0.0`, `InnoRouter 4.2.1`입니다.
 
 기본 개발 환경은 `Xcode 26.4+`와 `Swift 6.3`입니다.
 
@@ -34,7 +34,7 @@ Inno 라이브러리 의존성은 로컬 path package가 아니라 `Tuist/Packag
 - `Remote`
   - 외부 API의 endpoint 의미, remote model decode, InnoNetwork client 조립을 소유합니다.
   - `Data`가 소유한 remote data source contract를 구현합니다.
-  - base URL, retry, timeout, request/response interceptor, remote failure 변환을 이 레이어 안에 둡니다.
+  - base URL, retry, timeout, request/response interceptor, auth refresh, response cache, remote failure 변환을 이 레이어 안에 둡니다.
 - `Data`
   - domain repository 구현과 remote data source contract를 함께 소유합니다.
   - 비어 있는 응답 처리나 리스트 curate 같은 데이터 정책이 이 레이어에 있습니다.
@@ -167,7 +167,7 @@ graph TD
 Tuist helper는 현재 두 단계로 destinations / deployment targets를 나눕니다.
 - 일반 모듈: `defaultDestinations` / `defaultDeploymentTargets` (`iPhone / iPad / macOS`)
 - shared multi-platform 모듈: `sharedModuleDestinations` / `sharedModuleDeploymentTargets` (`iPhone / iPad / macOS / tvOS / visionOS / watchOS`)
-실제 iOS 앱과 함께 설치되는 watchOS companion은 별도 watch app/watch extension 타깃이 있어야 하며, 현재 샘플은 `App` 프로젝트에 그 타깃을 포함합니다.
+실제 iOS 앱과 함께 설치되는 watchOS companion은 modern single-target SwiftUI watchOS app으로 두며, 현재 샘플은 `App` 프로젝트 안에 `InnoSampleWatchApp` 타깃을 포함합니다.
 
 ## Module Map
 
@@ -181,7 +181,7 @@ Tuist helper는 현재 두 단계로 destinations / deployment targets를 나눕
   - base URL 입력으로 `LayerContainer -> FeatureContainer` 순서로 조립
   - `Layers` 내부의 data/domain container를 모르고, 개별 feature wiring 대신 use case를 root `Features`에 전달
   - `AnalyticsClient` concrete 구현을 앱 composition root에서 생성
-  - `Project.app(watchCompanion: ...)`로 iOS companion watch app / watch extension 타깃을 함께 생성
+  - `Project.app(watchCompanion: ...)`로 iOS companion용 single-target SwiftUI watchOS app을 함께 생성
   - `App/Project.swift`에서 앱 타깃 정의
 
 ### Layers
@@ -218,7 +218,11 @@ Tuist helper는 현재 두 단계로 destinations / deployment targets를 나눕
   - `Data`가 정의한 remote data source contract 구현
   - `RemoteContainer`가 base URL로 InnoNetwork client와 data source를 shared로 제공
   - `InnoNetwork 4.0.0`의 stable public surface인 `APIDefinition`과 `NetworkClient.request(_:)`를 사용
-  - request는 InnoNetwork 기본 헤더를 보존하고, 앱 메타데이터와 trace header만 `Remote` 내부 interceptor에서 적용
+  - `FetchTodosRequest`는 `AuthRequiredScope`로 인증 필요 request를 표시하고, `RefreshTokenPolicy(appliesTo:)`로 `/todos`에만 bearer token refresh/replay를 적용
+  - app 조립 경로는 `InnoNetworkPersistentCache`와 `CachePack(responseCachePolicy: .rfc9111Compliant(wrapping: .cacheFirst(maxAge: .seconds(300))))`로 GET 응답 cache를 opt-in 구성
+  - persistent cache 저장 위치는 user caches 하위 `InnoSample/RemoteHTTPCache`, 한도는 25 MiB / 500 entries
+  - request는 InnoNetwork 기본 헤더를 보존하고, `X-Sample-Feature`와 `User-Agent`처럼 cache key가 안정적인 메타데이터만 적용
+  - 요청마다 달라지는 request-id/trace header는 public GET cache reuse를 깨지 않도록 넣지 않음
   - 각 layer는 별도 `Project.swift`로 분리
   - 현재 제약:
     - `Remote`는 DTO decode와 remote data source 구현만 담당하고 `Domain` 모델을 직접 만들지 않음
@@ -237,7 +241,9 @@ Tuist helper는 현재 두 단계로 destinations / deployment targets를 나눕
     - 재사용 가능한 공용 컴포넌트만 `SampleDesignSupport`로 승격
   - Router 규칙:
     - coordinator와 route 정의는 `Router`에 두고, navigation/modal host view는 `*RouteHost` suffix 사용
-    - `*RouteHost`는 `NavigationHost`, `ModalHost`, `TabCoordinatorView`를 통해 route를 실제 screen/sheet에 매핑
+    - `*RouteHost`는 `FlowHost`, `NavigationSplitHost`, `ModalHost`, `TabCoordinatorView`를 통해 route를 실제 screen/sheet에 매핑
+    - push와 sheet가 같은 feature 흐름에 섞이는 People/Settings는 `FlowStore` + `FlowHost`를 사용
+    - list-detail split-view가 핵심인 Posts는 `NavigationStore` + `NavigationSplitHost` + `ModalStore` + `ModalHost`를 사용
 - `Features/EntireTabFeature`
   - 3탭 셸 (`People`, `Posts`, `Settings`)
   - `InnoRouter.TabCoordinatorView` 사용
@@ -282,7 +288,7 @@ Tuist helper는 현재 두 단계로 destinations / deployment targets를 나눕
 ## Run
 
 ```bash
-cd /Users/changwoo.son/Developer/InnoSquad/InnoSample
+tuist install
 tuist generate --no-open
 open InnoSample.xcworkspace
 ```
@@ -290,33 +296,24 @@ open InnoSample.xcworkspace
 or
 
 ```bash
-cd /Users/changwoo.son/Developer/InnoSquad/InnoSample
+make install-dependencies
 make generate
 make open
 ```
 
 ## Verify
 
+CI와 동일한 최소 gate:
+
 ```bash
-cd /Users/changwoo.son/Developer/InnoSquad/InnoSample
-./Scripts/check-layer-boundaries.sh
-xcodebuild -workspace InnoSample.xcworkspace -scheme Domain -destination 'platform=macOS' test
-xcodebuild -workspace InnoSample.xcworkspace -scheme Data -destination 'platform=macOS' test
-xcodebuild -workspace InnoSample.xcworkspace -scheme PeopleFeature -destination 'platform=macOS' test
-xcodebuild -workspace InnoSample.xcworkspace -scheme PostsFeature -destination 'platform=macOS' test
-xcodebuild -workspace InnoSample.xcworkspace -scheme SettingsFeature -destination 'platform=macOS' test
-xcodebuild -workspace InnoSample.xcworkspace -scheme EntireTabFeature -destination 'platform=macOS' test
-xcodebuild -workspace InnoSample.xcworkspace -scheme Layers -destination 'platform=macOS' test
-xcodebuild -workspace InnoSample.xcworkspace -scheme Features -destination 'platform=macOS' test
-xcodebuild -workspace InnoSample.xcworkspace -scheme InnoSampleApp -destination 'platform=macOS' test
-xcodebuild -workspace InnoSample.xcworkspace -scheme InnoSampleApp -destination 'platform=macOS' build
+make verify-ci
 ```
 
-`InnoDI` graph CLI도 같이 쓰려면 아래를 사용할 수 있습니다.
+`make verify-ci`는 `tuist install`, `tuist generate --no-open`, layer boundary check, InnoDI graph validation, Remote tests, leaf/root feature tests, iOS app build를 실행합니다. GitHub Actions의 `.github/workflows/verify.yml`도 같은 target을 사용합니다.
+
+로컬에서 더 넓게 확인하려면 아래를 사용합니다.
 
 ```bash
-cd /Users/changwoo.son/Developer/InnoSquad/InnoSample
-./Scripts/check-di-graph.sh validate
 make verify
 ```
 
@@ -333,16 +330,19 @@ make verify
 
 ## Docs
 
-- [ArchitectureReview](/Users/changwoo.son/Developer/InnoSquad/InnoSample/Docs/ArchitectureReview.md)
-- [LinkagePolicy](/Users/changwoo.son/Developer/InnoSquad/InnoSample/Docs/LinkagePolicy.md)
+- [ArchitectureReview](Docs/ArchitectureReview.md)
+- [LinkagePolicy](Docs/LinkagePolicy.md)
 
 ## Build Notes
 
 - `Layers`는 현재 framework로 유지합니다.
 - generated artifact hygiene는 `.gitignore` 기준으로 유지합니다.
+  - `.build/`
   - `Derived/`
   - `.xcodeproj/`
+  - `.xcworkspace/`
   - `xcuserdata/`
+  - `.xcuserstate`
   - `.DS_Store`
 - 이유는 `App`과 root `Features`가 모두 `Layers`를 소비하는 구조라, static product로 두면 duplicate link 경고가 발생하기 때문입니다.
 - 추후 `App`이 `Layers`를 직접 참조하지 않는 구조로 바뀌면 static product 복귀를 다시 검토할 수 있습니다.
@@ -350,16 +350,28 @@ make verify
 ## Workspace Hygiene
 
 - `Derived/`, `xcuserdata/`, `.DS_Store`, `.xcuserstate`는 repo 관리 대상이 아닙니다.
+- root `Package.resolved`와 `.package.resolved`도 repo 관리 대상이 아니며, `Tuist/Package.resolved`만 lockfile로 유지합니다.
 - `.gitignore`에서 이 산출물을 무시하고, boundary script와 wiring test로 실제 구조 회귀를 검증합니다.
 
 ## Dependency Strategy
 
 - `InnoSample`은 로컬 monorepo path dependency 샘플이 아니라, 릴리즈된 Inno 라이브러리를 소비하는 샘플입니다.
 - Inno 라이브러리 의존성 source of truth는 `Tuist/Package.swift` 입니다.
-- 버전은 `exact`로 고정하고 `Tuist/Package.resolved`를 함께 관리합니다.
+- 버전은 `exact`로 고정하고 lockfile은 `Tuist/Package.resolved`만 함께 관리합니다.
+- root `Package.resolved`와 `.package.resolved`는 SwiftPM/Tuist 작업 중 생길 수 있는 임시 산출물이므로 repo 관리 대상이 아닙니다.
 - 따라서 프레임워크를 로컬 수정해 즉시 반영하는 용도보다는, 외부 사용자 관점의 통합 예제로 보는 편이 맞습니다.
-- 공개 배포된 macro surface가 있으면 우선 사용합니다. 단, `InnoNetworkCodegen`처럼 아직 별도 공개 패키지로 배포되지 않은 macro package는 fresh clone 빌드 가능성을 위해 로컬 path dependency로 끌어오지 않습니다.
+- 공개 배포된 macro surface가 있으면 우선 사용합니다. 단, `InnoNetworkCodegen`처럼 root `InnoNetwork` package가 아니라 별도 compile-time package로 opt-in 해야 하는 surface는 fresh clone의 기본 dependency graph를 단순하게 유지하기 위해 이 샘플에 끌어오지 않습니다.
 
-현재 확인된 빌드 상태:
-- `InnoDI`와 `InnoFlow` 모두 consumer package graph에서 `swift-docc-plugin`을 제거한 뒤에도 `tuist generate`, `xcodebuild`는 성공합니다.
-- SwiftPM lockfile을 새로 해석하면 기존 `swift-docc-plugin` identity 경고도 사라집니다.
+현재 의존성 표면:
+
+| Package | Version | Sample surface |
+| --- | --- | --- |
+| `InnoDI` | `4.3.0` | `@DIContainer`, `@Provide`, root/layer/feature composition |
+| `InnoFlow` | `4.0.0` | `@InnoFlow(phaseManaged: true)`, `PhaseMap`, `EffectTask.cancellable`, `@BindableField`, `StoreInstrumentation` |
+| `InnoNetwork` | `4.0.0` | `APIDefinition`, `NetworkClient.request(_:)`, `RefreshTokenPolicy(appliesTo:)`, `CachePack`, `InnoNetworkPersistentCache` |
+| `InnoRouter` | `4.2.1` | `@Routable`, `FlowStore`, `FlowHost`, `NavigationSplitHost`, `ModalHost`, `DeepLinkMatcher`, `TabCoordinatorView` |
+
+현재 확인된 검증 상태:
+- `make verify-ci`: 통과
+- `Tuist/Package.resolved`: 위 exact version과 일치
+- root `Package.resolved` / `.package.resolved`: repo 관리 대상 아님

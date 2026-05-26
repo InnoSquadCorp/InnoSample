@@ -24,7 +24,7 @@ final class FeatureContainerTests: XCTestCase {
         coordinator.peopleCoordinator.showDetail(userID: 1)
 
         await waitUntil("people detail is shown from root composition") {
-            coordinator.peopleCoordinator.navigationStore.state.path == [.detail(Self.users[0])]
+            coordinator.peopleCoordinator.flowStore.path == [.push(.detail(Self.users[0]))]
         }
 
         XCTAssertEqual(coordinator.selectedTab, .people)
@@ -58,7 +58,7 @@ final class FeatureContainerTests: XCTestCase {
         coordinator.syncCrossFeatureNavigationFromPeople()
 
         await waitUntil("settings detail is shown through root mediation") {
-            coordinator.settingsCoordinator.navigationStore.state.path == [.detail(Self.todos[0])]
+            coordinator.settingsCoordinator.flowStore.path == [.push(.detail(Self.todos[0]))]
         }
 
         XCTAssertEqual(coordinator.selectedTab, .settings)
@@ -73,7 +73,7 @@ final class FeatureContainerTests: XCTestCase {
         coordinator.syncCrossFeatureNavigationFromSettings()
 
         await waitUntil("people detail is shown through root mediation") {
-            coordinator.peopleCoordinator.navigationStore.state.path == [.detail(Self.users[0])]
+            coordinator.peopleCoordinator.flowStore.path == [.push(.detail(Self.users[0]))]
         }
 
         XCTAssertEqual(coordinator.selectedTab, .people)

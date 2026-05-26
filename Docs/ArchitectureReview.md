@@ -1,6 +1,6 @@
 # InnoSample Architecture Review
 
-기준일: 2026-05-13 (P1 해결 반영)
+기준일: 2026-05-26 (latest released public surface 정렬)
 
 이 문서는 현재 `InnoSample` 코드베이스를 기준으로 한 구조 평가와 개선 우선순위를 정리한 문서입니다.
 목적은 “다시 설계할지”를 판단하는 것이 아니라, 현재 구조를 운영 가능한 수준에서 어떻게 더 단단하게 만들지 기준점을 남기는 것입니다.
@@ -12,9 +12,32 @@
 | Architecture | 9.4 / 10 | `App -> Layers -> Features + ThirdParty` 구조와 feature 다중 타깃 경계가 명확함 |
 | Code Detail | 9.1 / 10 | Swift concurrency, launch/watch wiring, root composition 테스트가 안정적임 |
 | InnoDI Usage | 9.1 / 10 | composition root, layer container, feature container 경계가 명확함 |
-| InnoFlow Usage | 9.3 / 10 | PhaseMap, IdentifiedArray, @BindableField, StoreInstrumentation까지 4.x 권장 surface를 반영 |
-| InnoRouter Usage | 9.3 / 10 | 상위 중재 + DeepLinkMatcher + Observation deferred dispatch + FlowHost / NavigationSplitHost / NavigationHost 세 host 패턴 공존 |
-| InnoNetwork Usage | 9.4 / 10 | retry/decoding/4xx 검증 + `AuthRequiredScope` 타입 마커 + single-flight `RefreshTokenPolicy` + `HTTPHeaderName<SingleValueHeader>` 적용 |
+| InnoFlow Usage | 9.3 / 10 | 모든 leaf reducer가 phase-managed macro surface를 쓰고, PhaseMap, IdentifiedArray, @BindableField, StoreInstrumentation까지 4.x 권장 surface를 반영 |
+| InnoRouter Usage | 9.4 / 10 | 상위 중재 + `@Routable` + DeepLinkMatcher + Observation deferred dispatch + FlowHost 중심 통합 + NavigationSplitHost split-view |
+| InnoNetwork Usage | 9.5 / 10 | retry/decoding/4xx 검증 + `AuthRequiredScope` 타입 마커 + single-flight `RefreshTokenPolicy(appliesTo:)` + typed headers + persistent cache 적용 |
+
+## Current Validation Status
+
+검증 상태는 scorecard와 분리해 관리합니다. 구조 점수는 설계 surface의 품질을, 이 섹션은 현재 checkout에서 실제로 확인한 gate 상태를 의미합니다.
+
+- `./Scripts/check-layer-boundaries.sh`: 통과
+- `./Scripts/check-di-graph.sh validate`: 통과
+- `make verify-ci`: 통과
+- `make test-features`: 통과
+- `make test-leaf-features`: 통과
+- `make test-remote`: 통과, 15 tests
+- `make build-app`: 통과
+
+## Current Dependency Surface
+
+| Package | Version | Current sample usage |
+| --- | --- | --- |
+| `InnoDI` | `4.3.0` | `@DIContainer`, `@Provide`, root/layer/feature graph |
+| `InnoFlow` | `4.0.0` | `@InnoFlow(phaseManaged: true)`, `PhaseMap`, synthesized case paths, `EffectTask.cancellable`, `@BindableField`, `StoreInstrumentation` |
+| `InnoNetwork` | `4.0.0` | `APIDefinition`, `NetworkClient.request(_:)`, `RefreshTokenPolicy(appliesTo:)`, `CachePack`, `InnoNetworkPersistentCache`, typed `HTTPHeaderName` |
+| `InnoRouter` | `4.2.1` | `@Routable`, `FlowStore`, `FlowHost`, `NavigationSplitHost`, `ModalHost`, `DeepLinkMatcher`, `TabCoordinatorView` |
+
+이 저장소에서 “latest surface”는 현재 release tag로 배포된 stable public API를 의미합니다. `InnoNetworkCodegen`처럼 root `InnoNetwork` package와 분리된 compile-time macro package는 fresh clone의 기본 dependency graph를 단순하게 유지하기 위해 아직 도입하지 않습니다.
 
 ## Overall Assessment
 
@@ -34,13 +57,13 @@
 
 ### P1
 
-해결됨. `InnoRouterCore / InnoRouterSwiftUI / InnoRouterDeepLink`를 `Tuist/Package.swift`의 `productTypes`에 `.framework`로 추가해, umbrella가 dynamic이고 sub-target은 static으로 빌드되며 발생하던 “Class is implemented in both …” warning을 제거했습니다. clean build에서 InnoRouter 관련 link warning은 사라졌고, 남은 18건은 모두 무해한 `appintentsmetadataprocessor` notice 입니다. 자세한 근거는 [LinkagePolicy.md](LinkagePolicy.md#external-package-product-types) 참고.
+해결됨. `InnoRouterCore / InnoRouterSwiftUI / InnoRouterDeepLink`를 `Tuist/Package.swift`의 `productTypes`에 `.framework`로 추가해, umbrella가 dynamic이고 sub-target은 static으로 빌드되며 발생하던 “Class is implemented in both …” warning을 제거했습니다. 현재 기준으로 알려진 InnoRouter duplicate-link warning은 없습니다. 환경에 따라 `appintentsmetadataprocessor` notice가 출력될 수 있지만 linkage failure는 아닙니다. 자세한 근거는 [LinkagePolicy.md](LinkagePolicy.md#external-package-product-types) 참고.
 
 ### P2
 
 1. `Remote` 네트워크 정책 테스트 확대 — 진행됨
-   - `RemotePolicyTests` 9개 (5+4): retry/decoding/4xx-비retry + Retry-After honor + POST 비-idempotent retry budget 보존 + AuthRequiredScope refresh single-flight + 동시 401 결합 + typed `HTTPHeaderName` 호환성. `SequencedStubURLSession`으로 호출 순서별 응답 큐잉.
-   - 다음 단계는 persistent cache wrapping (`rfc9111Compliant`).
+   - `RemotePolicyTests` 11개: retry/decoding/4xx-비retry + Retry-After honor + POST 비-idempotent retry budget 보존 + AuthRequiredScope refresh single-flight + 동시 401 결합 + typed `HTTPHeaderName` 호환성 + public GET response cache hit. `SequencedStubURLSession`으로 호출 순서별 응답 큐잉.
+   - persistent cache wrapping(`rfc9111Compliant`)은 app 조립 경로에 적용 완료. 테스트 factory 기본값은 cache 없음으로 유지해 테스트 간 상태 오염을 막습니다.
 
 2. watch companion 형상 현대화 — 진행됨
    - 기존 legacy 2-target (`watch2App` + `watch2Extension`, `WKWatchKitApp`) 구조를 modern single-target SwiftUI watchOS app(`product: .app` + watchOS destinations + `WKApplication: true`)로 교체.
@@ -68,7 +91,7 @@
    - README와 `.gitignore`, review 문서가 계속 어긋나지 않게 유지합니다.
 
 3. linkage 정책 문서와 실제 배치 동기화 유지
-   - [LinkagePolicy.md](/Users/changwoo.son/Developer/InnoSquad/InnoSample/Docs/LinkagePolicy.md) 는 현재 구조와 일치해야 합니다.
+   - [LinkagePolicy.md](LinkagePolicy.md) 는 현재 구조와 일치해야 합니다.
    - target product나 dependency shape가 바뀌면 문서도 같이 갱신합니다.
 
 ## Inno Library Review
@@ -84,7 +107,7 @@
 - `Logic` 타깃으로 물리 분리한 뒤 reducer 중심으로 상태 변화를 관리하는 구조가 적절합니다.
 - use case 호출과 UI/navigation import 금지 규칙이 명확해서, flow library를 설계 의도대로 잘 쓰고 있습니다.
 - 사용 중인 4.x 추가 패턴:
-  - `@InnoFlow(phaseManaged: true)` + `PhaseMap` DSL — `PeopleFeatureReducer`, `SettingsFeatureReducer`에서 idle/loading/loaded/failed FSM 선언.
+  - `@InnoFlow(phaseManaged: true)` + `PhaseMap` DSL — `PeopleFeatureReducer`, `PostsFeatureReducer`, `SettingsFeatureReducer`에서 idle/loading/loaded/failed FSM 선언.
   - `IdentifiedArrayOf<UserSummary>` — `PeopleFeatureReducer.State.people`에서 O(1) id lookup. `state.people[id: userID]` 패턴 사용 ([PeopleFeatureReducer.swift](../Features/PeopleFeature/Logics/Reducer/PeopleFeatureReducer.swift)).
   - `@BindableField` — `SettingsFeatureReducer.State.showsCompletedOnly` 토글 상태. Reducer는 `case setShowsCompletedOnly(Bool)` 액션으로만 업데이트.
   - `StoreInstrumentation` — `PeopleFeatureModel.init`에서 `.combined(.osLog, .signpost)` 어댑터를 DEBUG 빌드 한정으로 Store에 주입 ([PeopleFeatureModel.swift](../Features/PeopleFeature/Logics/Model/PeopleFeatureModel.swift)). Instruments + Console에서 effect lifecycle 추적 가능.
@@ -97,12 +120,12 @@
 - 세 가지 host 패턴을 의도적으로 sample 안에 공존:
   - **PeopleFeature** — `FlowStore<PeopleRoute>` + `FlowHost`: push + sheet 통합 path 투영.
   - **PostsFeature** — `NavigationStore<PostsRoute>` + `NavigationSplitHost` + `ModalHost`: iPad/macOS에서 sidebar(list) + detail(column) 자동 분리, iPhone에서는 SwiftUI가 NavigationStack으로 collapse해 push 흐름 유지.
-  - **SettingsFeature** — `NavigationStore` + `ModalHost` 두-스토어 패턴: 모달과 푸시 도메인 분기가 명확할 때 가장 읽기 쉬움.
-  - 채택 기준: 동일 평면에 push+modal이 섞이면 FlowStore, 사이드바+detail이 유리한 list-detail이면 NavigationSplitHost, 도메인 분기가 명확한 모달/푸시 분리는 두-스토어 유지.
-- `FlowStore<PeopleRoute>` 선택 도입 — PeopleFeature 한정.
+  - **SettingsFeature** — `FlowStore<SettingsRoute>` + `FlowHost`: detail push와 digest sheet를 단일 flow path로 투영.
+  - 채택 기준: 동일 평면에 push+modal이 섞이면 FlowStore, 사이드바+detail이 유리한 list-detail이면 NavigationSplitHost.
+- `FlowStore` 최신 surface 적용 — PeopleFeature / SettingsFeature.
   - `NavigationStore<PeopleRoute>` + `ModalStore<PeopleModalRoute>` 두 스토어를 `FlowStore<PeopleRoute>` 하나로 통합. 모달 라우트 enum(`PeopleModalRoute`)을 삭제하고 `PeopleRoute`에 `.overview([PeopleUser])` 케이스를 합침. dispatch는 `flowStore.send(.replaceStack([.detail(user)]))` / `.send(.presentSheet(.overview(users)))` / `.send(.dismiss)`로 단일 entry. View는 `ModalHost { NavigationHost { ... } ... }` 중첩에서 `FlowHost(store:destination:root:)` 한 줄로 단순화.
-  - Posts/Settings는 기존 두-스토어 패턴을 유지해 InnoSample 안에서 두 스타일을 나란히 비교할 수 있게 함. 의도된 의사결정.
-  - 채택 기준: 모달/푸시가 같은 dispatch 평면에 있고 단일 path 투영(`flowStore.path: [RouteStep<R>]`)이 디버깅/관찰성에 유리한 feature. 모달과 푸시가 서로 다른 도메인 분기로 명확히 갈리는 feature는 두-스토어 유지가 더 읽기 쉬울 수 있음.
+  - `SettingsRoute`도 `.detail(FeatureTodo)`와 `.digest(completed:total:)`를 함께 담고, `flowStore.path` / `currentModalPresentation`을 canonical read surface로 사용.
+  - Posts는 list-detail split-view가 핵심이므로 `NavigationSplitHost`를 유지. 이는 구형 패턴 보존이 아니라 split-view 목적의 최신 canonical surface 선택.
   - 처음 plan의 가설("FlowStore가 cross-feature mediation 폴링을 없앨 수 있다")은 부정확했음. FlowStore는 per-feature 추상이고 EntireTabCoordinator의 cross-tab intent 중재 패턴은 그대로.
 - 과거 polling Task로 맞추던 deferred external navigation은 두 단계로 정리됨:
   1. `*RouteHost`의 `.onChange(of:initial: true)` — view mount 시점이 selection arrival 이후여도 push가 한 번에 일어남.
@@ -116,22 +139,24 @@
 ### InnoNetwork
 
 - `Remote`가 `APIDefinition`과 `NetworkClient.request(_:)`를 직접 사용해 최신 public surface를 보여줍니다.
-- base URL, retry, timeout, metadata interceptor, logger, remote failure mapping은 외부 API 호출 layer인 `Remote` 내부에 모읍니다.
+- base URL, retry, timeout, metadata interceptor, logger, auth refresh, response cache, remote failure mapping은 외부 API 호출 layer인 `Remote` 내부에 모읍니다.
 - 4.x 권장 surface 추가 적용:
   - `Auth = AuthRequiredScope` 타입 마커 — [FetchTodosRequest](../Layers/Remote/Sources/Todo/Requests/FetchTodosRequest.swift)에 표기. `NetworkConfiguration`에 `refreshTokenPolicy`가 없는 상태로 인증 endpoint를 호출하면 transport 이전에 `NetworkError.configuration`로 거절되어 컴파일·런타임 양쪽에서 가드.
-  - `RefreshTokenPolicy` + single-flight refresh — [RemoteClientFactory.makeRefreshTokenPolicy](../Layers/Remote/Sources/Infrastructure/RemoteClientFactory.swift)에서 `RemoteTokenStore` actor를 currentToken/refreshToken 클로저로 위임. 401 → refresh → replay 한 번 수행, 동시 401 요청은 단일 refresh task로 결합.
-  - `HTTPHeaderName<SingleValueHeader>` phantom-typed 헤더 — `X-Sample-Feature` / `X-Request-ID`를 [RemoteHeaderNames.swift](../Layers/Remote/Sources/Infrastructure/RemoteHeaderNames.swift)에 typed name으로 선언하고 `headers[.sampleFeature] = featureName` 형태로 사용. `add` vs `update`를 컴파일 단계에서 강제.
-- 검증: `RemotePolicyTests`에 3개 추가 — `testAuthRequiredRequestAttachesBearerTokenAndRefreshesOn401`, `testConcurrentAuthRequiredRequestsCollapseRefreshIntoOneFlight`, `testHeadersUseTypedSampleFeatureName`. JSONPlaceholder는 `Authorization` 헤더를 무시하므로 production 런타임 회귀는 없음 — iOS UI test 통과 확인.
-- `InnoNetworkCodegen`이 public dependency surface로 소비 가능해지면 request 선언을 `@APIDefinition` 기반으로 줄이는 것이 다음 단계입니다.
+  - `RefreshTokenPolicy` + single-flight refresh — [RemoteClientFactory.makeRefreshTokenPolicy](../Layers/Remote/Sources/Infrastructure/RemoteClientFactory.swift)에서 `RemoteTokenStore` actor를 currentToken/refreshToken 클로저로 위임하고 `appliesTo`로 auth-required path만 bearer token을 받게 제한. 401 → refresh → replay 한 번 수행, 동시 401 요청은 단일 refresh task로 결합.
+  - `HTTPHeaderName<SingleValueHeader>` phantom-typed 헤더 — `X-Sample-Feature`를 [RemoteHeaderNames.swift](../Layers/Remote/Sources/Infrastructure/RemoteHeaderNames.swift)에 typed name으로 선언하고 `headers[.sampleFeature] = featureName` 형태로 사용. `add` vs `update`를 컴파일 단계에서 강제. 요청마다 달라지는 request-id header는 response cache key 안정성을 위해 넣지 않습니다.
+  - `InnoNetworkPersistentCache` — app 조립 경로에서 `PersistentResponseCache`를 구성하고 `CachePack(responseCachePolicy: .rfc9111Compliant(wrapping: .cacheFirst(maxAge: .seconds(300))))`로 GET 응답 cache를 opt-in 적용. 저장 위치는 user caches 하위 `InnoSample/RemoteHTTPCache`, 한도는 25 MiB / 500 entries. 테스트 factory 기본값은 cache 없음으로 유지해 테스트 간 상태 오염을 막음.
+- 검증: `RemotePolicyTests`는 auth refresh, concurrent single-flight, typed header, response cache reuse를 직접 검증합니다. Public GET은 `Authorization`/request-id 없이 cache key를 안정적으로 유지하고, auth-required Todo 요청은 bearer token refresh/replay를 검증합니다.
+- `InnoNetworkCodegen`은 root `InnoNetwork` package product가 아니라 별도 compile-time package opt-in이므로 fresh clone의 기본 dependency graph를 단순하게 유지하기 위해 사용하지 않습니다. 이 샘플은 최신 release가 root package로 제공하는 stable surface를 우선 사용합니다.
 
 ## Recommended Next Sequence
 
 1. Watch app `Domain` 모델 동기화 (현재는 fixture → `WatchConnectivity` 또는 App Group SwiftData로 production-ready 경로)
-2. `InnoNetwork` persistent cache wrapping (`rfc9111Compliant(wrapping:)`) — offline-first 시나리오 추가 시
-3. `InnoNetworkCodegen` 공개 시 `@APIDefinition` 매크로로 request 선언 축소
+2. `InnoNetworkCodegen` 공개 product 제공 시 `@APIDefinition` 매크로 적용 여부 재검토
+3. Persistent cache telemetry/statistics를 UI 또는 debug log에 노출
 4. InnoFlow row scoping (`ForEachIdentifiedReducer` + `ScopedStore`) — Logic 모듈 통합 또는 매크로 측 public reducer 지원 후
+5. release refresh 때마다 `Tuist/Package.swift` exact pin과 `Tuist/Package.resolved`만 함께 갱신
 
 ## Conclusion
 
-현재 `InnoSample`은 구조적으로 충분히 좋은 편입니다.
-지금 필요한 것은 “다시 뜯어고치기”보다, 운영 서비스 품질 기준에서 링크 전략, 테스트 밀도, 플랫폼 세부 정책을 더 단단하게 만드는 정리 작업입니다.
+현재 `InnoSample`은 구조적으로 충분히 좋은 편이며, 최신 released public surface를 소비하는 샘플이라는 목적에도 부합합니다.
+지금 남은 일은 큰 재설계보다 production-ready 동기화 경로, cache telemetry, 선택적 codegen macro 도입 같은 확장 과제입니다.

@@ -8,9 +8,11 @@
 let packageSettings = PackageSettings(
     productTypes: [
         "InnoDI": .framework,
+        "InnoDICore": .staticLibrary,
         "InnoDISwiftUI": .framework,
         "InnoFlow": .framework,
         "InnoNetwork": .framework,
+        "InnoNetworkPersistentCache": .framework,
         "InnoRouter": .framework,
         "InnoRouterCore": .framework,
         "InnoRouterSwiftUI": .framework,

@@ -1,6 +1,6 @@
 # InnoSample Linkage Policy
 
-기준일: 2026-05-13
+기준일: 2026-05-26
 
 이 문서는 현재 `InnoSample` 모듈들의 `framework` / `static library` 선택 기준을 짧게 고정하는 문서입니다.
 
@@ -43,11 +43,11 @@
 
 ## External Package Product Types
 
-`Tuist/Package.swift`의 `PackageSettings.productTypes`는 Inno 계열 SPM product 중 **여러 leaf 모듈이 직접 또는 transitively 소비하는 모든 product를 `.framework`로 승격**합니다.
+`Tuist/Package.swift`의 `PackageSettings.productTypes`는 Inno 계열 SPM product 중 **여러 leaf 모듈이 직접 또는 transitively 소비하는 runtime product를 `.framework`로 승격**합니다.
 
 - `InnoDI`, `InnoDISwiftUI`
 - `InnoFlow`
-- `InnoNetwork`
+- `InnoNetwork`, `InnoNetworkPersistentCache`
 - `InnoRouter`, `InnoRouterCore`, `InnoRouterSwiftUI`, `InnoRouterDeepLink`
 
 이유는 다음과 같습니다.
@@ -58,7 +58,17 @@
 - 결과적으로 같은 ObjC class / Swift metadata가 dynamic umbrella 내부 사본과 leaf static 사본 양쪽에 등록돼 “Class is implemented in both …” warning이 발생합니다.
 - sub-product를 함께 `.framework`로 승격하면 각자 단일 dynamic artifact가 되어 dyld가 한 번만 로드합니다.
 
+예외:
+
+- `InnoDICore`: `.staticLibrary`
+  - `InnoDIMacros` Swift macro target이 `InnoDICore`에 의존하므로, Tuist graph에서는 macro target이 dynamic framework에 의존하지 않도록 core product를 static으로 둡니다.
+  - `InnoDI` umbrella와 `InnoDISwiftUI`는 앱/feature runtime에서 직접 import되는 surface라 `.framework` 유지가 기준입니다.
+- macro/codegen product:
+  - route enum은 `InnoRouterMacros`의 `@Routable`을 사용하지만, macro target은 build-time toolchain surface라 runtime duplicate-link 문제의 대상이 아닙니다.
+  - `InnoNetworkCodegen`은 현재 샘플의 pinned root package에서 runtime/public product로 소비하지 않으므로 productTypes에 추가하지 않습니다.
+
 ## Known Issue
 
 - 현재 알려진 link warning 없음. `InnoRouterSwiftUI` duplicate class warning은 위 ProductTypes 조정으로 해소되었습니다.
-- 새로운 Inno 계열 sub-product를 import 하거나 transitively 의존하게 되면, 같은 패턴으로 `productTypes`에 `.framework`로 추가해야 합니다.
+- 새로운 Inno 계열 runtime sub-product를 import 하거나 transitively 의존하게 되면, 같은 패턴으로 `productTypes`에 `.framework`로 추가해야 합니다.
+- macro target이 직접 소비하는 helper/core product는 dynamic 승격 전에 Tuist graph lint를 먼저 확인해야 합니다.

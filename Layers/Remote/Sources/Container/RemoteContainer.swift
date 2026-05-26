@@ -9,7 +9,10 @@ public struct RemoteContainer {
     public var baseURL: URL
 
     @Provide(.shared, factory: { (baseURL: URL) in
-        RemoteClientFactory.makeClient(baseURL: baseURL)
+        RemoteClientFactory.makeClient(
+            baseURL: baseURL,
+            responseCache: RemotePersistentCacheFactory.make()
+        )
     })
     var networkClient: any NetworkClient
 

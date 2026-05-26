@@ -7,5 +7,4 @@ import InnoNetwork
 /// call site a compile-time check that the right header variant is used.
 extension HTTPHeaderName where Variant == SingleValueHeader {
     static var sampleFeature: HTTPHeaderName<SingleValueHeader> { .init("X-Sample-Feature") }
-    static var sampleRequestID: HTTPHeaderName<SingleValueHeader> { .init("X-Request-ID") }
 }

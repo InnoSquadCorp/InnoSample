@@ -4,10 +4,11 @@ ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 WORKSPACE := $(ROOT)/InnoSample.xcworkspace
 DERIVED_DATA ?= /tmp/innosample-make
 
-.PHONY: help generate open verify-boundaries verify-di test-domain test-data test-remote test-leaf-features test-layers test-features test-app build-app verify
+.PHONY: help install-dependencies generate open verify-boundaries verify-di test-domain test-data test-remote test-leaf-features test-layers test-features test-app build-app verify-ci verify
 
 help:
 	@echo "Available targets:"
+	@echo "  make install-dependencies # Resolve Tuist package dependencies"
 	@echo "  make generate             # Regenerate Tuist workspace/projects"
 	@echo "  make open                 # Open the generated workspace"
 	@echo "  make verify-boundaries    # Check layer import boundaries"
@@ -20,7 +21,11 @@ help:
 	@echo "  make test-features        # Run root Features tests"
 	@echo "  make test-app             # Run InnoSampleApp macOS tests"
 	@echo "  make build-app            # Build InnoSampleApp for iOS"
-	@echo "  make verify               # Run generate + DI/layer checks + key tests/build"
+	@echo "  make verify-ci            # Run the CI gate used by pull requests"
+	@echo "  make verify               # Run the full local gate"
+
+install-dependencies:
+	cd "$(ROOT)" && tuist install
 
 generate:
 	cd "$(ROOT)" && tuist generate --no-open
@@ -60,5 +65,7 @@ test-app:
 
 build-app:
 	cd "$(ROOT)" && xcodebuild -workspace "$(WORKSPACE)" -scheme InnoSampleApp -destination 'generic/platform=iOS' -derivedDataPath "$(DERIVED_DATA)/InnoSampleAppBuild" build
+
+verify-ci: install-dependencies generate verify-boundaries verify-di test-remote test-leaf-features test-features build-app
 
 verify: generate verify-boundaries verify-di test-domain test-data test-remote test-leaf-features test-layers test-features test-app build-app
