@@ -15,10 +15,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install Tuist
-        run: |
-          brew tap tuist/tuist
-          brew install --formula tuist
+      - name: Install pinned tools
+        uses: jdx/mise-action@v4
 
       - name: Print tool versions
         run: |
