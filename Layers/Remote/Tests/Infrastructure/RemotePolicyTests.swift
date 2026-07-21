@@ -1,5 +1,6 @@
 import Foundation
 import InnoNetwork
+import InnoNetworkTestSupport
 @testable import Remote
 import XCTest
 
@@ -7,7 +8,7 @@ final class RemotePolicyTests: XCTestCase {
     private let baseURL = URL(string: "https://example.com")!
 
     func testTransientServerErrorIsRetriedThenRecovers() async throws {
-        let session = SequencedStubURLSession(sequences: [
+        let session = MockURLSession(sequences: [
             "/users": [
                 .init(statusCode: 500),
                 .init(statusCode: 200, data: Self.usersFixture),
@@ -18,14 +19,14 @@ final class RemotePolicyTests: XCTestCase {
         let users = try await transport.send(FetchUsersRequest())
 
         XCTAssertEqual(users.count, 1)
-        let callCount = await session.callCount(forPath: "/users")
+        let callCount = session.callCount(forPath: "/users")
         XCTAssertEqual(callCount, 2, "single 500 should be retried exactly once before success")
     }
 
     func testRetryExhaustsAndMapsToInvalidStatus() async {
-        let session = SequencedStubURLSession(sequences: [
+        let session = MockURLSession(sequences: [
             "/users": Array(
-                repeating: SequencedStubURLSession.Response(statusCode: 500),
+                repeating: MockURLSessionResponse(statusCode: 500),
                 count: 5
             )
         ])
@@ -43,7 +44,7 @@ final class RemotePolicyTests: XCTestCase {
             XCTFail("Unexpected error: \(error)")
         }
 
-        let callCount = await session.callCount(forPath: "/users")
+        let callCount = session.callCount(forPath: "/users")
         // ExponentialBackoffRetryPolicy is configured with maxRetries: 2 in
         // RemoteClientFactory, so the coordinator makes 1 initial attempt
         // followed by up to 2 retries.
@@ -51,7 +52,7 @@ final class RemotePolicyTests: XCTestCase {
     }
 
     func testClientErrorIsNotRetried() async {
-        let session = SequencedStubURLSession(sequences: [
+        let session = MockURLSession(sequences: [
             "/users": [.init(statusCode: 404)]
         ])
         let transport = RemoteClientFactory.makeTransport(baseURL: baseURL, session: session)
@@ -68,13 +69,13 @@ final class RemotePolicyTests: XCTestCase {
             XCTFail("Unexpected error: \(error)")
         }
 
-        let callCount = await session.callCount(forPath: "/users")
+        let callCount = session.callCount(forPath: "/users")
         XCTAssertEqual(callCount, 1, "4xx other than 408/429 must not consume retry budget")
     }
 
     func testDecodingFailureMapsToRemoteFailureDecoding() async {
         let malformedJSON = Data("{ not valid json".utf8)
-        let session = SequencedStubURLSession(sequences: [
+        let session = MockURLSession(sequences: [
             "/users": [.init(statusCode: 200, data: malformedJSON)]
         ])
         let transport = RemoteClientFactory.makeTransport(baseURL: baseURL, session: session)
@@ -91,12 +92,12 @@ final class RemotePolicyTests: XCTestCase {
             XCTFail("Unexpected error: \(error)")
         }
 
-        let callCount = await session.callCount(forPath: "/users")
+        let callCount = session.callCount(forPath: "/users")
         XCTAssertEqual(callCount, 1, "decoding failures must not trigger retry")
     }
 
     func testRetryAppliesRemoteMetadataHeadersOnEveryAttempt() async throws {
-        let session = SequencedStubURLSession(sequences: [
+        let session = MockURLSession(sequences: [
             "/users": [
                 .init(statusCode: 500),
                 .init(statusCode: 200, data: Self.usersFixture),
@@ -106,7 +107,7 @@ final class RemotePolicyTests: XCTestCase {
 
         _ = try await transport.send(FetchUsersRequest())
 
-        let requests = await session.requestsByPath["/users"] ?? []
+        let requests = session.requestsByPath["/users"] ?? []
         XCTAssertEqual(requests.count, 2)
         for request in requests {
             XCTAssertEqual(request.value(forHTTPHeaderField: "X-Sample-Feature"), "People")
@@ -117,7 +118,7 @@ final class RemotePolicyTests: XCTestCase {
     }
 
     func testResponseCacheReusesStableMetadataHeaders() async throws {
-        let session = SequencedStubURLSession(sequences: [
+        let session = MockURLSession(sequences: [
             "/users": [
                 .init(
                     statusCode: 200,
@@ -136,7 +137,7 @@ final class RemotePolicyTests: XCTestCase {
         _ = try await transport.send(FetchUsersRequest())
         _ = try await transport.send(FetchUsersRequest())
 
-        let callCount = await session.callCount(forPath: "/users")
+        let callCount = session.callCount(forPath: "/users")
         XCTAssertEqual(
             callCount,
             1,
@@ -146,7 +147,7 @@ final class RemotePolicyTests: XCTestCase {
 
     func testAuthRequiredRequestAttachesBearerTokenAndRefreshesOn401() async throws {
         let tokenStore = RemoteTokenStore(initialToken: "init-token")
-        let session = SequencedStubURLSession(sequences: [
+        let session = MockURLSession(sequences: [
             "/todos": [
                 .init(statusCode: 401),
                 .init(statusCode: 200, data: Self.todosFixture),
@@ -161,10 +162,10 @@ final class RemotePolicyTests: XCTestCase {
         let todos = try await transport.send(FetchTodosRequest())
         XCTAssertEqual(todos.count, 1)
 
-        let callCount = await session.callCount(forPath: "/todos")
+        let callCount = session.callCount(forPath: "/todos")
         XCTAssertEqual(callCount, 2, "401 must trigger exactly one refresh + replay")
 
-        let requests = await session.requestsByPath["/todos"] ?? []
+        let requests = session.requestsByPath["/todos"] ?? []
         XCTAssertEqual(requests[0].value(forHTTPHeaderField: "Authorization"), "Bearer init-token")
         XCTAssertEqual(requests[1].value(forHTTPHeaderField: "Authorization"), "Bearer innosample-demo-token-v2")
 
@@ -176,7 +177,7 @@ final class RemotePolicyTests: XCTestCase {
         let tokenStore = RemoteTokenStore(initialToken: "init-token")
         // Both paths return 401 then 200 — concurrent requests should share
         // a single refresh task rather than each triggering its own.
-        let session = SequencedStubURLSession(sequences: [
+        let session = MockURLSession(sequences: [
             "/todos": [
                 .init(statusCode: 401),
                 .init(statusCode: 200, data: Self.todosFixture),
@@ -198,14 +199,14 @@ final class RemotePolicyTests: XCTestCase {
     }
 
     func testHeadersUseTypedSampleFeatureName() async throws {
-        let session = SequencedStubURLSession(sequences: [
+        let session = MockURLSession(sequences: [
             "/users": [.init(statusCode: 200, data: Self.usersFixture)]
         ])
         let transport = RemoteClientFactory.makeTransport(baseURL: baseURL, session: session)
 
         _ = try await transport.send(FetchUsersRequest())
 
-        let requests = await session.requestsByPath["/users"] ?? []
+        let requests = session.requestsByPath["/users"] ?? []
         XCTAssertEqual(requests.first?.value(forHTTPHeaderField: "X-Sample-Feature"), "People")
         XCTAssertEqual(
             HTTPHeaderName<SingleValueHeader>.sampleFeature.rawValue,
@@ -222,7 +223,7 @@ final class RemotePolicyTests: XCTestCase {
         // hinted retry succeeds — rather than timing, because the
         // coordinator's transport observation overhead is comparable to
         // the hint itself and would make wall-clock assertions flaky.
-        let session = SequencedStubURLSession(sequences: [
+        let session = MockURLSession(sequences: [
             "/users": [
                 .init(statusCode: 503, headers: ["Retry-After": "1"]),
                 .init(statusCode: 200, data: Self.usersFixture),
@@ -232,24 +233,14 @@ final class RemotePolicyTests: XCTestCase {
 
         _ = try await transport.send(FetchUsersRequest())
 
-        let callCount = await session.callCount(forPath: "/users")
+        let callCount = session.callCount(forPath: "/users")
         XCTAssertEqual(callCount, 2)
     }
 
     func testPostWithoutIdempotencyKeyIsNotRetriedEvenOnRetryableStatus() async {
-        struct EmptyAck: Decodable, Sendable {}
-        struct CreateTodoRequest: RemoteRequest {
-            typealias APIResponse = EmptyAck
-            typealias Auth = AuthRequiredScope
-
-            let featureName = "Settings"
-            let path = "/todos"
-            var method: HTTPMethod { .post }
-        }
-
-        let session = SequencedStubURLSession(sequences: [
+        let session = MockURLSession(sequences: [
             "/todos": Array(
-                repeating: SequencedStubURLSession.Response(statusCode: 503),
+                repeating: MockURLSessionResponse(statusCode: 503),
                 count: 4
             )
         ])
@@ -267,7 +258,7 @@ final class RemotePolicyTests: XCTestCase {
             XCTFail("Unexpected error: \(error)")
         }
 
-        let callCount = await session.callCount(forPath: "/todos")
+        let callCount = session.callCount(forPath: "/todos")
         XCTAssertEqual(
             callCount,
             1,
@@ -304,4 +295,13 @@ final class RemotePolicyTests: XCTestCase {
         ]
         """.utf8
     )
+}
+
+private struct EmptyAck: Decodable, Sendable {}
+
+@APIDefinition(method: .post, path: "/todos", auth: .required)
+private struct CreateTodoRequest: RemoteRequest {
+    typealias APIResponse = EmptyAck
+
+    var featureName: String { "Settings" }
 }

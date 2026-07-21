@@ -1,12 +1,10 @@
 import InnoNetwork
 
-protocol RemoteRequest: APIDefinition {
+protocol RemoteRequest {
     var featureName: String { get }
 }
 
-extension RemoteRequest {
-    var method: HTTPMethod { .get }
-
+extension RemoteRequest where Self: APIDefinition {
     var headers: HTTPHeaders {
         var headers = HTTPHeaders.default
         headers[.sampleFeature] = featureName

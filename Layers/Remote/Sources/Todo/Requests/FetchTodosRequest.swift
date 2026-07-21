@@ -1,10 +1,9 @@
 import Data
 import InnoNetwork
 
+@APIDefinition(method: .get, path: "/todos", auth: .required)
 struct FetchTodosRequest: RemoteRequest {
     typealias APIResponse = [TodoRemoteModel]
-    typealias Auth = AuthRequiredScope
 
-    let featureName = "Settings"
-    let path = "/todos"
+    var featureName: String { "Settings" }
 }

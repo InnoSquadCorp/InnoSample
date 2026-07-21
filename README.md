@@ -13,9 +13,9 @@
 - `App -> Layers + Features + ThirdParty`
 
 `InnoDI`, `InnoFlow`, `InnoNetwork`, `InnoRouter`를 쓰는 각 모듈은 독립 `Project.swift`로 관리하고, 루트는 `Workspace.swift`로 조립합니다.  
-Inno 라이브러리 의존성은 로컬 path package가 아니라 각 프로젝트 manifest의 remote package + exact version 고정 방식으로 소비합니다. 현재 기준 pin은 `InnoDI 5.1.0`, `InnoFlow 5.1.0`, `InnoNetwork 4.0.0`, `InnoRouter 5.2.1`입니다.
+Inno 라이브러리 의존성은 로컬 path package가 아니라 각 프로젝트 manifest의 remote package + exact version 고정 방식으로 소비합니다. 현재 기준 pin은 `InnoDI 5.1.0`, `InnoFlow 5.1.0`, `InnoNetwork 5.0.0`, `InnoRouter 5.2.1`입니다.
 
-기본 개발 환경은 `Xcode 26.4+`, `Swift 6.3`, `.mise.toml`에 고정한 `Tuist 4.67.2`입니다.
+기본 개발 환경은 `Xcode 26.4+`, `Swift 6.3`, `.mise.toml`에 고정한 `Tuist 4.202.5`입니다. InnoNetwork 5.0의 default `Macros` package trait를 Tuist XcodeProj에서 보존하려면 이 버전이 필요합니다.
 
 상세 구조 평가와 개선 우선순위는 [Docs/ArchitectureReview.md](Docs/ArchitectureReview.md) 에 정리합니다.
 
@@ -217,8 +217,8 @@ Tuist helper는 현재 두 단계로 destinations / deployment targets를 나눕
   - raw 응답을 그대로 퍼뜨리지 않고, 필요한 필드만 평탄화/정규화한 DTO를 반환
   - `Data`가 정의한 remote data source contract 구현
   - `RemoteContainer`가 base URL로 InnoNetwork client와 data source를 shared로 제공
-  - `InnoNetwork 4.0.0`의 stable public surface인 `APIDefinition`과 `NetworkClient.request(_:)`를 사용
-  - `FetchTodosRequest`는 `AuthRequiredScope`로 인증 필요 request를 표시하고, `RefreshTokenPolicy(appliesTo:)`로 `/todos`에만 bearer token refresh/replay를 적용
+  - `InnoNetwork 5.0.0`의 default `Macros` trait에서 제공하는 `@APIDefinition(method:path:auth:)`로 모든 named endpoint의 method/path/auth와 protocol witness를 생성
+  - `FetchTodosRequest`는 `auth: .required`로 인증 경계를 명시하고, `RefreshTokenPolicy(appliesTo:)`로 `/todos`에만 bearer token refresh/replay를 적용
   - app 조립 경로는 `InnoNetworkPersistentCache`와 `CachePack(responseCachePolicy: .rfc9111Compliant(wrapping: .cacheFirst(maxAge: .seconds(300))))`로 GET 응답 cache를 opt-in 구성
   - persistent cache 저장 위치는 user caches 하위 `InnoSample/RemoteHTTPCache`, 한도는 25 MiB / 500 entries
   - request는 InnoNetwork 기본 헤더를 보존하고, `X-Sample-Feature`와 `User-Agent`처럼 cache key가 안정적인 메타데이터만 적용
@@ -362,7 +362,7 @@ make verify
 - `Tuist/Package.swift`는 per-project package 해석과 중복되지 않도록 dependency 목록을 비워 둡니다.
 - `Package.resolved`는 SwiftPM/Tuist가 생성하는 산출물로만 취급합니다. fresh generate가 exact requirement를 다시 해석하므로 lockfile을 저장소에 고정하지 않습니다.
 - 따라서 프레임워크를 로컬 수정해 즉시 반영하는 용도보다는, 외부 사용자 관점의 통합 예제로 보는 편이 맞습니다.
-- 공개 배포된 macro surface가 있으면 우선 사용합니다. 단, `InnoNetworkCodegen`처럼 root `InnoNetwork` package가 아니라 별도 compile-time package로 opt-in 해야 하는 surface는 fresh clone의 기본 dependency graph를 단순하게 유지하기 위해 이 샘플에 끌어오지 않습니다.
+- 공개 배포된 macro surface가 있으면 우선 사용합니다. `InnoNetwork 5.0.0`은 root product의 default `Macros` trait로 `@APIDefinition`을 제공하므로 별도 codegen package 없이 사용합니다.
 
 현재 의존성 표면:
 
@@ -370,11 +370,11 @@ make verify
 | --- | --- | --- |
 | `InnoDI` | `5.1.0` | `@DIHierarchyRoot`, `@DIComponent`, `@DIContainer`, `@SubContainer`, Xcode/Tuist DAG validation plugin |
 | `InnoFlow` | `5.1.0` | `@InnoFlow(phaseManaged: true)`, `PhaseMap`, `EffectTask.cancellable`, `@BindableField`, `StoreInstrumentation`, `TestStore`, `ManualTestClock` |
-| `InnoNetwork` | `4.0.0` | `APIDefinition`, `NetworkClient.request(_:)`, `RefreshTokenPolicy(appliesTo:)`, `CachePack`, `InnoNetworkPersistentCache` |
+| `InnoNetwork` | `5.0.0` | `@APIDefinition(method:path:auth:)`, `NetworkClient.request(_:)`, `RefreshTokenPolicy(appliesTo:)`, `AuthPack`, `CachePack`, `InnoNetworkPersistentCache`, `MockURLSession`, `StubNetworkClient` |
 | `InnoRouter` | `5.2.1` | `@Router`, `@TabItem`, `@DeepLink`, `RouterHost`, `RouterSplitHost`, `RouterTabHost`, `@EnvironmentRouter`, `FlowTestStore` |
 
 현재 확인된 검증 상태:
 - fresh `tuist generate --no-open`: 통과
-- generated workspace resolution: 위 exact version 및 `InnoDI 5.1.0` release SHA와 일치
-- feature test suites와 generic iOS app build: 통과
-- 전체 `make verify-ci`: 통과 (2026-07-21, Xcode 26.5)
+- generated workspace resolution: 위 exact version, `InnoDI 5.1.0`, `InnoNetwork 5.0.0` release SHA `c83d4b3fc0e1fd4b18743308d5064d18cf5a5987`과 일치
+- Remote 16개 + feature 24개, 총 40개 테스트와 generic iOS app build: 통과
+- 전체 `make verify-ci`: 통과 (2026-07-21, Xcode 26.5, Tuist 4.202.5)

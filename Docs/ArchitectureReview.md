@@ -12,7 +12,7 @@
 | InnoDI 5.1 | Macro-first | strict hierarchy + type-based factories + DAG validation plugin |
 | InnoFlow 5.1 | Macro-first | phase-managed reducers + deterministic testing surface |
 | InnoRouter 5.2.1 | Macro-first | generated routers, hosts, tabs, deep links, environment routing |
-| InnoNetwork 4.0 | Stable public surface | typed requests, auth refresh, persistent cache |
+| InnoNetwork 5.0 | Macro-first | generated endpoint contracts, explicit auth, advanced packs, persistent cache, consumer test support |
 
 ## Current Dependency Surface
 
@@ -20,7 +20,7 @@
 | --- | --- | --- |
 | `InnoDI` | `5.1.0` | `@DIHierarchyRoot`, `@DIComponent`, `@DIContainer`, `@Provide`, `@SubContainer`, `InnoDIDAGValidationPlugin` |
 | `InnoFlow` | `5.1.0` | `@InnoFlow(phaseManaged: true)`, `PhaseMap`, cancellable effects, `@BindableField`, `StoreInstrumentation`, `TestStore`, `ManualTestClock` |
-| `InnoNetwork` | `4.0.0` | `APIDefinition`, `NetworkClient.request(_:)`, scoped refresh, typed headers, persistent cache |
+| `InnoNetwork` | `5.0.0` | `@APIDefinition`, `NetworkClient.request(_:)`, explicit auth, scoped refresh, typed headers, persistent cache, `InnoNetworkTestSupport` |
 | `InnoRouter` | `5.2.1` | `@Router`, `@TabItem`, `@DeepLink`, macro hosts, `@EnvironmentRouter`, `FlowTestStore` |
 
 의존성은 각 project manifest가 exact remote package로 선언합니다. `Tuist/Package.swift`는 per-project package 선언과 중복되지 않도록 dependency 목록을 비워 두며, generated `Package.resolved`는 저장소에 추적하지 않습니다.
@@ -64,12 +64,14 @@
 
 `EntireTabCoordinator`는 generated tab router를 직접 소유하지 않습니다. child coordinator의 typed business intent를 소비하고, root bridge가 environment tab router로 실제 탭 선택을 수행합니다.
 
-## InnoNetwork 4.0
+## InnoNetwork 5.0
 
-- `Remote`가 `APIDefinition`과 `NetworkClient.request(_:)`를 직접 사용합니다.
-- `AuthRequiredScope`와 `RefreshTokenPolicy(appliesTo:)`로 인증 endpoint만 refresh/replay 대상에 포함합니다.
+- 모든 named endpoint는 root product의 default `Macros` trait가 제공하는 `@APIDefinition(method:path:auth:)`으로 conformance, method, path, auth, empty parameter witness를 생성합니다.
+- public endpoint는 `auth: .anonymous`, 인증 endpoint는 `auth: .required`를 선언하고 `RefreshTokenPolicy(appliesTo:)`로 `/todos`만 refresh/replay 대상에 포함합니다.
+- production client는 concrete `URLSession` 경계를 사용하고, test target만 `InnoNetworkTestSupport`를 연결해 `MockURLSession`과 `StubNetworkClient`를 사용합니다.
+- request metadata adapter는 5.0 역할 구분에 맞춰 `AuthPack.additionalRequestInterceptors`로 구성합니다.
 - typed `HTTPHeaderName`, RFC 9111 cache policy, `InnoNetworkPersistentCache`를 app 조립 경로에 적용합니다.
-- `RemotePolicyTests`가 retry, decoding, auth single-flight, header, cache 동작을 검증합니다.
+- `RemotePolicyTests`와 `RemoteTransportTests`가 macro-generated contract, typed stub, retry, decoding, auth single-flight, header, cache 동작을 검증합니다.
 
 ## Validation Contract
 
@@ -83,13 +85,13 @@
 6. root Features tests
 7. generic iOS app build
 
-generated workspace가 `InnoDI 5.1.0`의 release SHA를 resolve하는지도 별도로 확인합니다. 현재 최종 변경 기준으로 전체 gate가 통과했습니다.
+generated workspace가 `InnoDI 5.1.0`과 `InnoNetwork 5.0.0`의 release SHA를 resolve하는지도 별도로 확인합니다. 현재 최종 변경 기준으로 전체 gate가 통과했습니다.
 
 ## Recommended Next Sequence
 
 1. Watch app fixture를 `WatchConnectivity` 또는 App Group storage 기반 동기화로 교체
 2. persistent cache telemetry/statistics를 debug surface에 노출
-3. InnoNetwork macro package를 stable root product로 제공할 때 codegen 채택 재검토
+3. InnoNetwork request/cache event를 app debug observability surface에 연결
 4. topology-aware hierarchy gate를 InnoSample CI의 명시적 검증 결과로 노출
 
 ## Conclusion

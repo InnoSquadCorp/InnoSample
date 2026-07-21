@@ -6,7 +6,7 @@ enum RemoteClientFactory {
 
     static func makeTransport(
         baseURL: URL,
-        session: URLSessionProtocol = URLSession.shared,
+        session: URLSession = .shared,
         tokenStore: RemoteTokenStore = RemoteTokenStore(),
         responseCache: (any ResponseCache)? = nil
     ) -> RemoteTransport {
@@ -22,7 +22,7 @@ enum RemoteClientFactory {
 
     static func makeClient(
         baseURL: URL,
-        session: URLSessionProtocol = URLSession.shared,
+        session: URLSession = .shared,
         tokenStore: RemoteTokenStore = RemoteTokenStore(),
         responseCache: (any ResponseCache)? = nil
     ) -> any NetworkClient {
@@ -37,10 +37,25 @@ enum RemoteClientFactory {
 
     static func makeClient(
         environment: RemoteEnvironment,
-        session: URLSessionProtocol = URLSession.shared,
+        session: URLSession = .shared,
         tokenStore: RemoteTokenStore = RemoteTokenStore(),
         responseCache: (any ResponseCache)? = nil
     ) -> any NetworkClient {
+        DefaultNetworkClient(
+            configuration: makeConfiguration(
+                environment: environment,
+                tokenStore: tokenStore,
+                responseCache: responseCache
+            ),
+            session: session
+        )
+    }
+
+    static func makeConfiguration(
+        environment: RemoteEnvironment,
+        tokenStore: RemoteTokenStore = RemoteTokenStore(),
+        responseCache: (any ResponseCache)? = nil
+    ) -> NetworkConfiguration {
         let cache = responseCache.map {
             CachePack(
                 responseCachePolicy: .rfc9111Compliant(wrapping: .cacheFirst(maxAge: .seconds(300))),
@@ -62,7 +77,7 @@ enum RemoteClientFactory {
             ),
             auth: AuthPack(
                 refreshToken: makeRefreshTokenPolicy(tokenStore: tokenStore),
-                additionalSigners: [
+                additionalRequestInterceptors: [
                     RemoteMetadataInterceptor(environment: environment),
                 ],
                 additionalResponseInterceptors: [
@@ -75,11 +90,11 @@ enum RemoteClientFactory {
                 cachePolicy: .reloadIgnoringLocalCacheData
             )
         )
-        return DefaultNetworkClient(configuration: configuration, session: session)
+        return configuration
     }
 
     /// Bearer-token refresh policy used for endpoints opting into
-    /// `Auth = AuthRequiredScope`. The closures are stateless from the
+    /// `auth: .required`. The closures are stateless from the
     /// library's perspective — single-flight coordination and one-time
     /// replay on 401 live inside InnoNetwork's `RefreshTokenCoordinator`.
     private static func makeRefreshTokenPolicy(
