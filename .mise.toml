@@ -1,2 +1,3 @@
 [tools]
+ripgrep = "15.1.0"
 tuist = "4.67.2"
