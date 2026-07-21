@@ -1,5 +1,4 @@
 import Foundation
-import InnoRouter
 import Observation
 import PostsFeatureInterface
 import PostsFeatureLogic
@@ -7,8 +6,6 @@ import PostsFeatureLogic
 @MainActor
 @Observable
 public final class PostsFeatureCoordinator {
-    let navigationStore = NavigationStore<PostsRoute>()
-    let modalStore = ModalStore<PostsModalRoute>()
     let model: PostsFeatureModel
 
     init(input: PostsFeatureInput) {
@@ -26,13 +23,4 @@ public final class PostsFeatureCoordinator {
         model.showHighlights()
     }
 
-    func syncNavigationFromSelection() {
-        guard let selectedPost = model.consumeSelectedPost() else { return }
-        navigationStore.send(.go(.detail(selectedPost)))
-    }
-
-    func syncModalPresentation() {
-        guard let posts = model.consumeHighlightsPosts() else { return }
-        modalStore.send(.present(.highlights(posts), style: .sheet))
-    }
 }

@@ -13,7 +13,7 @@
 - `App -> Layers + Features + ThirdParty`
 
 `InnoDI`, `InnoFlow`, `InnoNetwork`, `InnoRouter`를 쓰는 각 모듈은 독립 `Project.swift`로 관리하고, 루트는 `Workspace.swift`로 조립합니다.  
-Inno 라이브러리 의존성은 로컬 path package가 아니라 `Tuist/Package.swift`에서 관리하는 remote package + exact version 고정 방식으로 소비합니다. 현재 기준 pin은 `InnoDI 4.3.0`, `InnoFlow 4.0.0`, `InnoNetwork 4.0.0`, `InnoRouter 4.2.1`입니다.
+Inno 라이브러리 의존성은 로컬 path package가 아니라 각 프로젝트 manifest의 remote package + exact version 고정 방식으로 소비합니다. 현재 기준 pin은 `InnoDI 5.1.0`, `InnoFlow 5.1.0`, `InnoNetwork 4.0.0`, `InnoRouter 5.2.1`입니다.
 
 기본 개발 환경은 `Xcode 26.4+`와 `Swift 6.3`입니다.
 
@@ -241,12 +241,14 @@ Tuist helper는 현재 두 단계로 destinations / deployment targets를 나눕
     - 재사용 가능한 공용 컴포넌트만 `SampleDesignSupport`로 승격
   - Router 규칙:
     - coordinator와 route 정의는 `Router`에 두고, navigation/modal host view는 `*RouteHost` suffix 사용
-    - `*RouteHost`는 `FlowHost`, `NavigationSplitHost`, `ModalHost`, `TabCoordinatorView`를 통해 route를 실제 screen/sheet에 매핑
-    - push와 sheet가 같은 feature 흐름에 섞이는 People/Settings는 `FlowStore` + `FlowHost`를 사용
-    - list-detail split-view가 핵심인 Posts는 `NavigationStore` + `NavigationSplitHost` + `ModalStore` + `ModalHost`를 사용
+    - route enum은 `@Router`가 destination과 store를 생성하고, view는 `@EnvironmentRouter`로 navigation command를 전송
+    - People/Settings는 `RouterHost`, list-detail split-view가 핵심인 Posts는 `RouterSplitHost`를 사용하며 watchOS에서는 `RouterHost`로 축소
+    - tab shell은 `@Router` + `@TabItem` + `RouterTabHost`, deep link는 scheme/host allowlist를 가진 `@Router` + `@DeepLink`의 generated resolver를 사용
+    - coordinator는 business intent와 sibling mediation만 소유하고 navigation store를 수동 보관하지 않음
 - `Features/EntireTabFeature`
   - 3탭 셸 (`People`, `Posts`, `Settings`)
-  - `InnoRouter.TabCoordinatorView` 사용
+  - `SampleTab`의 `@Router` + `@TabItem` 선언과 `RouterTabHost` 사용
+  - `SampleDeepLink`의 `@DeepLink` 선언과 generated `resolveDeepLink(_:)` 사용
   - `EntireTabFeatureInterface / Logic / UI / Router / Testing / Tests`로 분리
   - `EntireTabContainer`는 `Router` 타깃에서 탭 coordinator를 조립
 - `Features/PeopleFeature`
@@ -350,15 +352,15 @@ make verify
 ## Workspace Hygiene
 
 - `Derived/`, `xcuserdata/`, `.DS_Store`, `.xcuserstate`는 repo 관리 대상이 아닙니다.
-- root `Package.resolved`와 `.package.resolved`도 repo 관리 대상이 아니며, `Tuist/Package.resolved`만 lockfile로 유지합니다.
+- root, Tuist, generated workspace의 `Package.resolved`는 repo 관리 대상이 아닙니다.
 - `.gitignore`에서 이 산출물을 무시하고, boundary script와 wiring test로 실제 구조 회귀를 검증합니다.
 
 ## Dependency Strategy
 
 - `InnoSample`은 로컬 monorepo path dependency 샘플이 아니라, 릴리즈된 Inno 라이브러리를 소비하는 샘플입니다.
-- Inno 라이브러리 의존성 source of truth는 `Tuist/Package.swift` 입니다.
-- 버전은 `exact`로 고정하고 lockfile은 `Tuist/Package.resolved`만 함께 관리합니다.
-- root `Package.resolved`와 `.package.resolved`는 SwiftPM/Tuist 작업 중 생길 수 있는 임시 산출물이므로 repo 관리 대상이 아닙니다.
+- Inno 라이브러리 의존성 source of truth는 `Tuist/ProjectDescriptionHelpers/Dependency/TargetDependency+.swift`의 exact remote package 선언과 각 `Project.swift`의 package 목록입니다.
+- `Tuist/Package.swift`는 per-project package 해석과 중복되지 않도록 dependency 목록을 비워 둡니다.
+- `Package.resolved`는 SwiftPM/Tuist가 생성하는 산출물로만 취급합니다. fresh generate가 exact requirement를 다시 해석하므로 lockfile을 저장소에 고정하지 않습니다.
 - 따라서 프레임워크를 로컬 수정해 즉시 반영하는 용도보다는, 외부 사용자 관점의 통합 예제로 보는 편이 맞습니다.
 - 공개 배포된 macro surface가 있으면 우선 사용합니다. 단, `InnoNetworkCodegen`처럼 root `InnoNetwork` package가 아니라 별도 compile-time package로 opt-in 해야 하는 surface는 fresh clone의 기본 dependency graph를 단순하게 유지하기 위해 이 샘플에 끌어오지 않습니다.
 
@@ -366,12 +368,13 @@ make verify
 
 | Package | Version | Sample surface |
 | --- | --- | --- |
-| `InnoDI` | `4.3.0` | `@DIContainer`, `@Provide`, root/layer/feature composition |
-| `InnoFlow` | `4.0.0` | `@InnoFlow(phaseManaged: true)`, `PhaseMap`, `EffectTask.cancellable`, `@BindableField`, `StoreInstrumentation` |
+| `InnoDI` | `5.1.0` | `@DIHierarchyRoot`, `@DIComponent`, `@DIContainer`, `@SubContainer`, Xcode/Tuist DAG validation plugin |
+| `InnoFlow` | `5.1.0` | `@InnoFlow(phaseManaged: true)`, `PhaseMap`, `EffectTask.cancellable`, `@BindableField`, `StoreInstrumentation`, `TestStore`, `ManualTestClock` |
 | `InnoNetwork` | `4.0.0` | `APIDefinition`, `NetworkClient.request(_:)`, `RefreshTokenPolicy(appliesTo:)`, `CachePack`, `InnoNetworkPersistentCache` |
-| `InnoRouter` | `4.2.1` | `@Routable`, `FlowStore`, `FlowHost`, `NavigationSplitHost`, `ModalHost`, `DeepLinkMatcher`, `TabCoordinatorView` |
+| `InnoRouter` | `5.2.1` | `@Router`, `@TabItem`, `@DeepLink`, `RouterHost`, `RouterSplitHost`, `RouterTabHost`, `@EnvironmentRouter`, `FlowTestStore` |
 
 현재 확인된 검증 상태:
-- `make verify-ci`: 통과
-- `Tuist/Package.resolved`: 위 exact version과 일치
-- root `Package.resolved` / `.package.resolved`: repo 관리 대상 아님
+- fresh `tuist generate --no-open`: 통과
+- generated workspace resolution: 위 exact version 및 `InnoDI 5.1.0` release SHA와 일치
+- feature test suites와 generic iOS app build: 통과
+- 전체 `make verify-ci`: 통과 (2026-07-21, Xcode 26.5)

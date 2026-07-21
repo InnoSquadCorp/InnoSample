@@ -3,8 +3,11 @@ import ProjectDescriptionHelpers
 
 let project = Project.leafLayer(
     .remote,
+    packages: [.innoDI, .innoNetwork],
     dependencies: [
         .layer(.data),
+        .package(.innoDI),
+        .package(.innoDIDAGValidationPlugin),
         .package(.innoNetwork),
         .package(.innoNetworkPersistentCache)
     ],

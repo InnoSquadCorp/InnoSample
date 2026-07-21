@@ -10,27 +10,30 @@ public struct PeopleFeatureRouteHost: View {
     }
 
     public var body: some View {
-        FlowHost(store: coordinator.flowStore) { route in
-            switch route {
-            case .detail(let user):
-                PeopleDetailScreen(user: user, onOpenSettings: coordinator.openSettings)
-            case .overview(let users):
-                PeopleOverviewSheet(users: users) {
-                    coordinator.flowStore.send(.dismiss)
-                }
-            }
-        } root: {
-            PeopleScreen(
-                model: coordinator.model,
-                onSelect: coordinator.select,
-                onShowOverview: coordinator.showOverview
-            )
+        RouterHost(PeopleRoute.self) {
+            PeopleFeatureRoot()
         }
+        .environment(coordinator)
+    }
+}
+
+private struct PeopleFeatureRoot: View {
+    @Environment(PeopleFeatureCoordinator.self) private var coordinator
+    @EnvironmentRouter(PeopleRoute.self) private var router
+
+    var body: some View {
+        PeopleScreen(
+            model: coordinator.model,
+            onSelect: coordinator.select,
+            onShowOverview: coordinator.showOverview
+        )
         .onChange(of: coordinator.selectedUserID, initial: true) { _, _ in
-            coordinator.syncNavigationFromSelection()
+            guard let selectedUser = coordinator.model.consumeSelectedUser() else { return }
+            router.send(flow: .replaceStack([.detail(selectedUser)]))
         }
         .onChange(of: coordinator.pendingOverviewToken, initial: false) { _, _ in
-            coordinator.syncModalPresentation()
+            guard let users = coordinator.model.consumeOverviewUsers() else { return }
+            router.sheet(.overview(users))
         }
     }
 }

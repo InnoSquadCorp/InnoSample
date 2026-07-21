@@ -1,14 +1,11 @@
 import InnoDI
 import PostsFeatureInterface
 
-@MainActor
-@DIContainer
+@DIContainer(mainActor: true)
 public struct PostsFeatureContainer {
     @Provide(.input)
     public var input: PostsFeatureInput
 
-    @Provide(.transient, factory: { (input: PostsFeatureInput) in
-        PostsFeatureCoordinator(input: input)
-    }, concrete: true)
+    @Provide(.transient, PostsFeatureCoordinator.self, with: [\Self.input])
     public var coordinator: PostsFeatureCoordinator
 }

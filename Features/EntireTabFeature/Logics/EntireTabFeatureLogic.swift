@@ -1,14 +1,4 @@
-import EntireTabFeatureInterface
-import Observation
-
-@MainActor
-@Observable
-public final class EntireTabFeatureModel {
-    public var selectedTab: SampleTab = .people
-    public var tabBadges: [SampleTab: Int] = [
-        .posts: 3,
-        .settings: 1
-    ]
-
-    public init() {}
+public enum EntireTabFeatureDefaults {
+    public static let postsBadge = 3
+    public static let settingsBadge = 1
 }

@@ -4,6 +4,7 @@ import ProjectDescriptionHelpers
 let project = Project.compositeFeature(
     .entireTab,
     children: [.people, .posts, .settings],
+    packages: [.innoDI, .innoFlow, .innoRouter],
     dependencies: .init(
         logic: [
             .package(.innoDI),
@@ -11,6 +12,7 @@ let project = Project.compositeFeature(
         ],
         router: [
             .package(.innoDI),
+            .package(.innoDIDAGValidationPlugin),
             .package(.innoRouter),
             .package(.innoRouterMacros)
         ]

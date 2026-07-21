@@ -1,16 +1,41 @@
 import InnoRouter
-import InnoRouterMacros
 import PeopleFeatureInterface
+import PeopleFeatureUI
+import SwiftUI
 
-/// Unified route enum consumed by `FlowStore<PeopleRoute>`. The previous
-/// split between `PeopleRoute` (push destinations) and `PeopleModalRoute`
-/// (sheet destinations) is collapsed here because `FlowStore` represents
-/// push + modal progression on a single typed array. The intent
-/// (`.push` vs `.presentSheet`) decides whether each case is rendered
-/// inline or as a modal at runtime; the enum itself just identifies
-/// what to show.
-@Routable
+@Router
 enum PeopleRoute {
     case detail(PeopleUser)
     case overview([PeopleUser])
+
+    var destination: some View {
+        switch self {
+        case .detail(let user):
+            PeopleDetailDestination(user: user)
+        case .overview(let users):
+            PeopleOverviewDestination(users: users)
+        }
+    }
+}
+
+private struct PeopleDetailDestination: View {
+    @Environment(PeopleFeatureCoordinator.self) private var coordinator
+
+    let user: PeopleUser
+
+    var body: some View {
+        PeopleDetailScreen(user: user, onOpenSettings: coordinator.openSettings)
+    }
+}
+
+private struct PeopleOverviewDestination: View {
+    @EnvironmentRouter(PeopleRoute.self) private var router
+
+    let users: [PeopleUser]
+
+    var body: some View {
+        PeopleOverviewSheet(users: users) {
+            router.dismiss()
+        }
+    }
 }

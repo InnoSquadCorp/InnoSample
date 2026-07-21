@@ -10,39 +10,46 @@ public struct PostsFeatureRouteHost: View {
     }
 
     public var body: some View {
-        // PostsFeature is the split-view sample: NavigationSplitHost is the
-        // canonical InnoRouter surface for long list-detail features.
-        ModalHost(store: coordinator.modalStore) { route in
-            switch route {
-            case .highlights(let posts):
-                PostHighlightsSheet(posts: posts) {
-                    coordinator.modalStore.send(.dismiss)
-                }
-            }
-        } content: {
-            NavigationSplitHost(store: coordinator.navigationStore) {
-                PostsScreen(
-                    model: coordinator.model,
-                    onSelect: coordinator.select,
-                    onShowHighlights: coordinator.showHighlights
-                )
-            } destination: { route in
-                switch route {
-                case .detail(let post):
-                    PostDetailScreen(post: post)
-                }
-            } root: {
-                Text("Select a post")
-                    .font(.title3)
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            }
+        host
+            .environment(coordinator)
+    }
+
+    @ViewBuilder
+    private var host: some View {
+#if os(watchOS)
+        RouterHost(PostsRoute.self) {
+            PostsFeatureRoot()
         }
+#else
+        RouterSplitHost(PostsRoute.self) {
+            PostsFeatureRoot()
+        } root: {
+            Text("Select a post")
+                .font(.title3)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+#endif
+    }
+}
+
+private struct PostsFeatureRoot: View {
+    @Environment(PostsFeatureCoordinator.self) private var coordinator
+    @EnvironmentRouter(PostsRoute.self) private var router
+
+    var body: some View {
+        PostsScreen(
+            model: coordinator.model,
+            onSelect: coordinator.select,
+            onShowHighlights: coordinator.showHighlights
+        )
         .onChange(of: coordinator.selectedPostID, initial: false) { _, _ in
-            coordinator.syncNavigationFromSelection()
+            guard let selectedPost = coordinator.model.consumeSelectedPost() else { return }
+            router.go(.detail(selectedPost))
         }
         .onChange(of: coordinator.pendingHighlightsToken, initial: false) { _, _ in
-            coordinator.syncModalPresentation()
+            guard let posts = coordinator.model.consumeHighlightsPosts() else { return }
+            router.sheet(.highlights(posts))
         }
     }
 }

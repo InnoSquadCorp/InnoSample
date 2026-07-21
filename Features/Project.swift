@@ -2,6 +2,7 @@ import ProjectDescription
 import ProjectDescriptionHelpers
 
 let project = Project.rootFeatures(
+    packages: [.innoDI],
     dependencies: [
         .feature(router: .entireTab),
         .feature(router: .people),
@@ -12,7 +13,8 @@ let project = Project.rootFeatures(
         .feature(interface: .posts),
         .feature(interface: .settings),
         .layer(.domain),
-        .package(.innoDI)
+        .package(.innoDI),
+        .package(.innoDIDAGValidationPlugin)
     ],
     testDependencies: [
         .layer(.domain),

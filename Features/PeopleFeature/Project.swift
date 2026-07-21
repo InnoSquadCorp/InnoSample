@@ -3,6 +3,7 @@ import ProjectDescriptionHelpers
 
 let project = Project.feature(
     .people,
+    packages: [.innoDI, .innoFlow, .innoRouter],
     dependencies: .init(
         interface: [
             .layer(.domain)
@@ -17,11 +18,14 @@ let project = Project.feature(
         ],
         router: [
             .package(.innoDI),
+            .package(.innoDIDAGValidationPlugin),
             .package(.innoRouter),
             .package(.innoRouterMacros)
         ],
         tests: [
-            .layer(.domain)
+            .layer(.domain),
+            .package(.innoFlowTesting),
+            .package(.innoRouterTesting)
         ]
     )
 )

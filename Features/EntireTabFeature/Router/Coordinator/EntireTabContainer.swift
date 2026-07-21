@@ -3,8 +3,8 @@ import PeopleFeatureRouter
 import PostsFeatureRouter
 import SettingsFeatureRouter
 
-@MainActor
-@DIContainer
+@DIComponent
+@DIContainer(mainActor: true)
 public struct EntireTabContainer {
     @Provide(.input)
     public var peopleCoordinator: PeopleFeatureCoordinator
@@ -26,6 +26,6 @@ public struct EntireTabContainer {
             postsCoordinator: postsCoordinator,
             settingsCoordinator: settingsCoordinator
         )
-    }, concrete: true)
+    })
     public var coordinator: EntireTabCoordinator
 }

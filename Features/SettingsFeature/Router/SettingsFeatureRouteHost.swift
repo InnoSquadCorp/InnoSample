@@ -10,27 +10,30 @@ public struct SettingsFeatureRouteHost: View {
     }
 
     public var body: some View {
-        FlowHost(store: coordinator.flowStore) { route in
-            switch route {
-            case .detail(let todo):
-                SettingsDetailScreen(todo: todo, onOpenPeople: coordinator.openPeople)
-            case .digest(let completed, let total):
-                SettingsDigestSheet(completed: completed, total: total) {
-                    coordinator.flowStore.send(.dismiss)
-                }
-            }
-        } root: {
-            SettingsScreen(
-                model: coordinator.model,
-                onSelect: coordinator.select,
-                onShowDigest: coordinator.showDigest
-            )
+        RouterHost(SettingsRoute.self) {
+            SettingsFeatureRoot()
         }
+        .environment(coordinator)
+    }
+}
+
+private struct SettingsFeatureRoot: View {
+    @Environment(SettingsFeatureCoordinator.self) private var coordinator
+    @EnvironmentRouter(SettingsRoute.self) private var router
+
+    var body: some View {
+        SettingsScreen(
+            model: coordinator.model,
+            onSelect: coordinator.select,
+            onShowDigest: coordinator.showDigest
+        )
         .onChange(of: coordinator.selectedTodoID, initial: true) { _, _ in
-            coordinator.syncNavigationFromSelection()
+            guard let selectedTodo = coordinator.model.consumeSelectedTodo() else { return }
+            router.send(flow: .replaceStack([.detail(selectedTodo)]))
         }
         .onChange(of: coordinator.pendingDigestToken, initial: false) { _, _ in
-            coordinator.syncModalPresentation()
+            guard let request = coordinator.model.consumeDigestRequest() else { return }
+            router.sheet(.digest(completed: request.completed, total: request.total))
         }
     }
 }

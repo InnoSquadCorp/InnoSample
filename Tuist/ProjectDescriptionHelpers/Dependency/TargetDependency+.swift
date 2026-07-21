@@ -63,6 +63,43 @@ public extension TargetDependency {
     }
 
     static func package(_ product: ExternalPackageProduct) -> Self {
-        .external(name: product.rawValue)
+        switch product {
+        case .innoDIDAGValidationPlugin:
+            return .package(product: product.rawValue, type: .plugin)
+        case .innoRouterMacros:
+            return .package(product: product.rawValue, type: .macro)
+        default:
+            return .package(product: product.rawValue)
+        }
+    }
+}
+
+public extension Package {
+    static var innoDI: Self {
+        .remote(
+            url: "https://github.com/InnoSquadCorp/InnoDI.git",
+            requirement: .exact("5.1.0")
+        )
+    }
+
+    static var innoFlow: Self {
+        .remote(
+            url: "https://github.com/InnoSquadCorp/InnoFlow",
+            requirement: .exact("5.1.0")
+        )
+    }
+
+    static var innoNetwork: Self {
+        .remote(
+            url: "https://github.com/InnoSquadCorp/InnoNetwork.git",
+            requirement: .exact("4.0.0")
+        )
+    }
+
+    static var innoRouter: Self {
+        .remote(
+            url: "https://github.com/InnoSquadCorp/InnoRouter.git",
+            requirement: .exact("5.2.1")
+        )
     }
 }

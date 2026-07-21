@@ -4,83 +4,82 @@ import Features
 @testable import PeopleFeatureRouter
 @testable import PostsFeatureRouter
 @testable import SettingsFeatureRouter
-import XCTest
+import Testing
 
+@Suite("Feature container")
 @MainActor
-final class FeatureContainerTests: XCTestCase {
-    func testFeatureContainerCreatesRootCoordinator() {
-        let container = makeContainer()
-        let coordinator = container.coordinator
-        FeatureTestRetainer.retain(coordinator)
+struct FeatureContainerTests {
+    @Test("DIComponent exposes its generated dependency contract")
+    func generatedComponentDependenciesConstructTheContainer() {
+        let dependencies = StubFeatureContainerDependencies(
+            useCases: StubFeatureUseCases(
+                users: Self.users,
+                posts: Self.posts,
+                todos: Self.todos
+            )
+        )
 
-        XCTAssertEqual(coordinator.selectedTab, .people)
+        let container = FeatureContainer(dependencies: dependencies)
+
+        #expect(type(of: container.coordinator) == EntireTabCoordinator.self)
     }
 
-    func testFeatureContainerLoadsPeopleCoordinatorFromInjectedUseCase() async {
-        let container = makeContainer()
-        let coordinator = container.coordinator
-        FeatureTestRetainer.retain(coordinator)
+    @Test("root composition queues typed people navigation")
+    func rootCompositionCreatesPeopleCoordinator() {
+        let coordinator = makeContainer().coordinator
 
         coordinator.peopleCoordinator.showDetail(userID: 1)
 
-        await waitUntil("people detail is shown from root composition") {
-            coordinator.peopleCoordinator.flowStore.path == [.push(.detail(Self.users[0]))]
-        }
-
-        XCTAssertEqual(coordinator.selectedTab, .people)
-    }
-
-    func testFeatureContainerLoadsPostsCoordinatorFromInjectedUseCase() async {
-        let container = makeContainer()
-        let coordinator = container.coordinator
-        FeatureTestRetainer.retain(coordinator)
-
-        coordinator.postsCoordinator.model.loadIfNeeded()
-        await waitUntil("posts load for highlights modal") {
-            coordinator.postsCoordinator.model.posts == Self.posts
-        }
-
-        coordinator.postsCoordinator.showHighlights()
-        coordinator.postsCoordinator.syncModalPresentation()
-
-        XCTAssertEqual(
-            coordinator.postsCoordinator.modalStore.currentPresentation?.route,
-            .highlights(Self.posts)
+        #expect(
+            coordinator.peopleCoordinator.model.activityLog.contains(
+                "queued external navigation for user #1"
+            )
         )
     }
 
-    func testFeatureContainerMediatesPeopleToSettingsNavigation() async {
-        let container = makeContainer()
-        let coordinator = container.coordinator
-        FeatureTestRetainer.retain(coordinator)
+    @Test("root composition creates the posts coordinator")
+    func rootCompositionCreatesPostsCoordinator() {
+        let coordinator = makeContainer().coordinator
 
-        coordinator.peopleCoordinator.openSettings(for: .init(assigneeID: 1))
-        coordinator.syncCrossFeatureNavigationFromPeople()
-
-        await waitUntil("settings detail is shown through root mediation") {
-            coordinator.settingsCoordinator.flowStore.path == [.push(.detail(Self.todos[0]))]
-        }
-
-        XCTAssertEqual(coordinator.selectedTab, .settings)
+        #expect(coordinator.postsCoordinator.model.posts.isEmpty)
     }
 
-    func testFeatureContainerMediatesSettingsToPeopleNavigation() async {
-        let container = makeContainer()
-        let coordinator = container.coordinator
-        FeatureTestRetainer.retain(coordinator)
+    @Test("root composition mediates people to settings with a typed tab")
+    func mediatesPeopleToSettingsNavigation() {
+        let coordinator = makeContainer().coordinator
+
+        coordinator.peopleCoordinator.openSettings(for: .init(assigneeID: 1))
+
+        #expect(coordinator.consumeCrossFeatureNavigationFromPeople() == .settings)
+        #expect(
+            coordinator.settingsCoordinator.model.activityLog.contains(
+                "queued external navigation for assignee #1"
+            )
+        )
+    }
+
+    @Test("root composition mediates settings to people with a typed tab")
+    func mediatesSettingsToPeopleNavigation() {
+        let coordinator = makeContainer().coordinator
 
         coordinator.settingsCoordinator.openPeople(for: .init(userID: 1))
-        coordinator.syncCrossFeatureNavigationFromSettings()
 
-        await waitUntil("people detail is shown through root mediation") {
-            coordinator.peopleCoordinator.flowStore.path == [.push(.detail(Self.users[0]))]
-        }
-
-        XCTAssertEqual(coordinator.selectedTab, .people)
+        #expect(coordinator.consumeCrossFeatureNavigationFromSettings() == .people)
+        #expect(
+            coordinator.peopleCoordinator.model.activityLog.contains(
+                "queued external navigation for user #1"
+            )
+        )
     }
 
     private func makeContainer() -> FeatureContainer {
-        FeatureContainer(useCases: StubFeatureUseCases(users: Self.users, posts: Self.posts, todos: Self.todos))
+        FeatureContainer(
+            useCases: StubFeatureUseCases(
+                users: Self.users,
+                posts: Self.posts,
+                todos: Self.todos
+            )
+        )
     }
 
     private static let users: [UserSummary] = [
@@ -97,22 +96,17 @@ final class FeatureContainerTests: XCTestCase {
     ]
 
     private static let posts: [PostSummary] = [
-        .init(
-            id: 100,
-            title: "Post",
-            body: "Body",
-            authorID: 1
-        )
+        .init(id: 100, title: "Post", body: "Body", authorID: 1)
     ]
 
     private static let todos: [TodoSummary] = [
-        .init(
-            id: 200,
-            title: "Todo for Leanne",
-            completed: false,
-            assigneeID: 1
-        )
+        .init(id: 200, title: "Todo for Leanne", completed: false, assigneeID: 1)
     ]
+}
+
+@MainActor
+private struct StubFeatureContainerDependencies: FeatureContainerDependencies {
+    let useCases: any FeatureUseCaseContaining
 }
 
 private struct StubFeatureUseCases: FeatureUseCaseContaining {
@@ -129,56 +123,15 @@ private struct StubFeatureUseCases: FeatureUseCaseContaining {
 
 private struct StubUserRepository: UserRepositoryProtocol {
     let users: [UserSummary]
-
-    init(users: [UserSummary] = []) {
-        self.users = users
-    }
-
     func fetchUsers() async throws -> [UserSummary] { users }
 }
 
 private struct StubPostRepository: PostRepositoryProtocol {
     let posts: [PostSummary]
-
-    init(posts: [PostSummary] = []) {
-        self.posts = posts
-    }
-
     func fetchPosts() async throws -> [PostSummary] { posts }
 }
 
 private struct StubTodoRepository: TodoRepositoryProtocol {
     let todos: [TodoSummary]
-
-    init(todos: [TodoSummary] = []) {
-        self.todos = todos
-    }
-
     func fetchTodos() async throws -> [TodoSummary] { todos }
-}
-
-@MainActor
-private enum FeatureTestRetainer {
-    static var retainedObjects: [AnyObject] = []
-
-    static func retain(_ object: AnyObject) {
-        retainedObjects.append(object)
-    }
-}
-
-@MainActor
-private func waitUntil(
-    _ description: String,
-    timeoutNanoseconds: UInt64 = 1_000_000_000,
-    pollNanoseconds: UInt64 = 10_000_000,
-    condition: @escaping @MainActor () -> Bool
-) async {
-    let deadline = DispatchTime.now().uptimeNanoseconds + timeoutNanoseconds
-
-    while condition() == false, DispatchTime.now().uptimeNanoseconds < deadline {
-        await Task.yield()
-        try? await Task.sleep(nanoseconds: pollNanoseconds)
-    }
-
-    XCTAssertTrue(condition(), description)
 }

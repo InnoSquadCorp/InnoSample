@@ -8,7 +8,7 @@ import PostsFeatureRouter
 import SettingsFeatureInterface
 import SettingsFeatureRouter
 
-@MainActor
+@DIComponent
 @DIContainer(mainActor: true)
 public struct FeatureContainer {
     // Features only depend on the narrow domain use case surface, not the DomainContainer concrete type.
@@ -17,47 +17,47 @@ public struct FeatureContainer {
 
     @Provide(.shared, factory: { (useCases: any FeatureUseCaseContaining) in
         PeopleFeatureInput(fetchPeopleUseCase: useCases.fetchPeopleUseCase)
-    }, concrete: true)
+    })
     var peopleInput: PeopleFeatureInput
 
     @Provide(.shared, factory: { (useCases: any FeatureUseCaseContaining) in
         PostsFeatureInput(fetchPostsUseCase: useCases.fetchPostsUseCase)
-    }, concrete: true)
+    })
     var postsInput: PostsFeatureInput
 
     @Provide(.shared, factory: { (useCases: any FeatureUseCaseContaining) in
         SettingsFeatureInput(fetchTodosUseCase: useCases.fetchTodosUseCase)
-    }, concrete: true)
+    })
     var settingsInput: SettingsFeatureInput
 
     @Provide(.shared, factory: { (peopleInput: PeopleFeatureInput) in
         PeopleFeatureContainer(input: peopleInput)
-    }, concrete: true)
+    })
     var peopleFeatureContainer: PeopleFeatureContainer
 
     @Provide(.shared, factory: { (postsInput: PostsFeatureInput) in
         PostsFeatureContainer(input: postsInput)
-    }, concrete: true)
+    })
     var postsFeatureContainer: PostsFeatureContainer
 
     @Provide(.shared, factory: { (settingsInput: SettingsFeatureInput) in
         SettingsFeatureContainer(input: settingsInput)
-    }, concrete: true)
+    })
     var settingsFeatureContainer: SettingsFeatureContainer
 
     @Provide(.shared, factory: { (peopleFeatureContainer: PeopleFeatureContainer) in
         peopleFeatureContainer.coordinator
-    }, concrete: true)
+    })
     var peopleCoordinator: PeopleFeatureCoordinator
 
     @Provide(.shared, factory: { (postsFeatureContainer: PostsFeatureContainer) in
         postsFeatureContainer.coordinator
-    }, concrete: true)
+    })
     var postsCoordinator: PostsFeatureCoordinator
 
     @Provide(.shared, factory: { (settingsFeatureContainer: SettingsFeatureContainer) in
         settingsFeatureContainer.coordinator
-    }, concrete: true)
+    })
     var settingsCoordinator: SettingsFeatureCoordinator
 
     @SubContainer(
@@ -70,6 +70,7 @@ public struct FeatureContainer {
     )
     var entireTabContainer: EntireTabContainer
 
+    @MainActor
     public var coordinator: EntireTabCoordinator {
         entireTabContainer.coordinator
     }

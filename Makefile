@@ -3,6 +3,7 @@ SHELL := /bin/bash
 ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 WORKSPACE := $(ROOT)/InnoSample.xcworkspace
 DERIVED_DATA ?= /tmp/innosample-make
+PACKAGE_VALIDATION_FLAGS := -skipPackagePluginValidation -skipMacroValidation
 
 .PHONY: help install-dependencies generate open verify-boundaries verify-di test-domain test-data test-remote test-leaf-features test-layers test-features test-app build-app verify-ci verify
 
@@ -40,31 +41,31 @@ verify-di:
 	cd "$(ROOT)" && ./Scripts/check-di-graph.sh validate
 
 test-domain:
-	cd "$(ROOT)" && xcodebuild -workspace "$(WORKSPACE)" -scheme Domain -destination 'platform=macOS' -derivedDataPath "$(DERIVED_DATA)/Domain" test
+	cd "$(ROOT)" && xcodebuild $(PACKAGE_VALIDATION_FLAGS) -workspace "$(WORKSPACE)" -scheme Domain -destination 'platform=macOS' -derivedDataPath "$(DERIVED_DATA)/Domain" test
 
 test-data:
-	cd "$(ROOT)" && xcodebuild -workspace "$(WORKSPACE)" -scheme Data -destination 'platform=macOS' -derivedDataPath "$(DERIVED_DATA)/Data" test
+	cd "$(ROOT)" && xcodebuild $(PACKAGE_VALIDATION_FLAGS) -workspace "$(WORKSPACE)" -scheme Data -destination 'platform=macOS' -derivedDataPath "$(DERIVED_DATA)/Data" test
 
 test-remote:
-	cd "$(ROOT)" && xcodebuild -workspace "$(WORKSPACE)" -scheme Remote -destination 'platform=macOS' -derivedDataPath "$(DERIVED_DATA)/Remote" test
+	cd "$(ROOT)" && xcodebuild $(PACKAGE_VALIDATION_FLAGS) -workspace "$(WORKSPACE)" -scheme Remote -destination 'platform=macOS' -derivedDataPath "$(DERIVED_DATA)/Remote" test
 
 test-leaf-features:
-	cd "$(ROOT)" && xcodebuild -workspace "$(WORKSPACE)" -scheme PeopleFeature -destination 'platform=macOS' -derivedDataPath "$(DERIVED_DATA)/PeopleFeature" test
-	cd "$(ROOT)" && xcodebuild -workspace "$(WORKSPACE)" -scheme PostsFeature -destination 'platform=macOS' -derivedDataPath "$(DERIVED_DATA)/PostsFeature" test
-	cd "$(ROOT)" && xcodebuild -workspace "$(WORKSPACE)" -scheme SettingsFeature -destination 'platform=macOS' -derivedDataPath "$(DERIVED_DATA)/SettingsFeature" test
-	cd "$(ROOT)" && xcodebuild -workspace "$(WORKSPACE)" -scheme EntireTabFeature -destination 'platform=macOS' -derivedDataPath "$(DERIVED_DATA)/EntireTabFeature" test
+	cd "$(ROOT)" && xcodebuild $(PACKAGE_VALIDATION_FLAGS) -workspace "$(WORKSPACE)" -scheme PeopleFeature -destination 'platform=macOS' -derivedDataPath "$(DERIVED_DATA)/PeopleFeature" test
+	cd "$(ROOT)" && xcodebuild $(PACKAGE_VALIDATION_FLAGS) -workspace "$(WORKSPACE)" -scheme PostsFeature -destination 'platform=macOS' -derivedDataPath "$(DERIVED_DATA)/PostsFeature" test
+	cd "$(ROOT)" && xcodebuild $(PACKAGE_VALIDATION_FLAGS) -workspace "$(WORKSPACE)" -scheme SettingsFeature -destination 'platform=macOS' -derivedDataPath "$(DERIVED_DATA)/SettingsFeature" test
+	cd "$(ROOT)" && xcodebuild $(PACKAGE_VALIDATION_FLAGS) -workspace "$(WORKSPACE)" -scheme EntireTabFeature -destination 'platform=macOS' -derivedDataPath "$(DERIVED_DATA)/EntireTabFeature" test
 
 test-layers:
-	cd "$(ROOT)" && xcodebuild -workspace "$(WORKSPACE)" -scheme Layers -destination 'platform=macOS' -derivedDataPath "$(DERIVED_DATA)/Layers" test
+	cd "$(ROOT)" && xcodebuild $(PACKAGE_VALIDATION_FLAGS) -workspace "$(WORKSPACE)" -scheme Layers -destination 'platform=macOS' -derivedDataPath "$(DERIVED_DATA)/Layers" test
 
 test-features:
-	cd "$(ROOT)" && xcodebuild -workspace "$(WORKSPACE)" -scheme Features -destination 'platform=macOS' -derivedDataPath "$(DERIVED_DATA)/Features" test
+	cd "$(ROOT)" && xcodebuild $(PACKAGE_VALIDATION_FLAGS) -workspace "$(WORKSPACE)" -scheme Features -destination 'platform=macOS' -derivedDataPath "$(DERIVED_DATA)/Features" test
 
 test-app:
-	cd "$(ROOT)" && xcodebuild -workspace "$(WORKSPACE)" -scheme InnoSampleApp -destination 'platform=macOS' -derivedDataPath "$(DERIVED_DATA)/InnoSampleAppTests" test
+	cd "$(ROOT)" && xcodebuild $(PACKAGE_VALIDATION_FLAGS) -workspace "$(WORKSPACE)" -scheme InnoSampleApp -destination 'platform=macOS' -derivedDataPath "$(DERIVED_DATA)/InnoSampleAppTests" test
 
 build-app:
-	cd "$(ROOT)" && xcodebuild -workspace "$(WORKSPACE)" -scheme InnoSampleApp -destination 'generic/platform=iOS' -derivedDataPath "$(DERIVED_DATA)/InnoSampleAppBuild" build
+	cd "$(ROOT)" && xcodebuild $(PACKAGE_VALIDATION_FLAGS) -workspace "$(WORKSPACE)" -scheme InnoSampleApp -destination 'generic/platform=iOS' -derivedDataPath "$(DERIVED_DATA)/InnoSampleAppBuild" build
 
 verify-ci: install-dependencies generate verify-boundaries verify-di test-remote test-leaf-features test-features build-app
 

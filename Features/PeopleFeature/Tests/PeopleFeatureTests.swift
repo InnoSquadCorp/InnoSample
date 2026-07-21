@@ -1,54 +1,111 @@
 @testable import Domain
+import InnoFlowTesting
+import InnoRouterTesting
 import PeopleFeatureInterface
 @testable import PeopleFeatureLogic
 @testable import PeopleFeatureRouter
 import PeopleFeatureTesting
-import XCTest
+import Testing
 
+@Suite("People feature")
 @MainActor
-final class PeopleFeatureTests: XCTestCase {
-    func testModelLoadsPeople() async {
-        let model = PeopleFeatureModel {
-            PeopleFeatureFixtures.users
-        }
-        PeopleFeatureTestRetainer.retain(model)
+struct PeopleFeatureTests {
+    @Test("phase-managed load is deterministic")
+    func reducerLoadsPeople() async {
+        let users = PeopleFeatureFixtures.users
+        let store = TestStore(
+            reducer: PeopleFeatureReducer(
+                dependencies: .init(loadPeople: { users })
+            )
+        )
 
-        model.loadIfNeeded()
-        await waitUntil("people are loaded") {
-            Array(model.people) == PeopleFeatureFixtures.users && model.isLoading == false
+        await store.send(.onAppear, through: PeopleFeatureReducer.phaseMap) {
+            $0.phase = .loading
+            $0.isLoading = true
+            $0.activityLog = ["initial people load"]
         }
-
-        XCTAssertEqual(Array(model.people), PeopleFeatureFixtures.users)
-        XCTAssertFalse(model.isLoading)
+        await store.receive(.peopleLoaded(users), through: PeopleFeatureReducer.phaseMap) {
+            $0.phase = .loaded
+            $0.isLoading = false
+            $0.hasLoaded = true
+            $0.people = IdentifiedArrayOf(uniqueElements: users)
+            $0.activityLog.append("loaded \(users.count) people")
+        }
+        await store.finish()
     }
 
-    func testCoordinatorClearsSelectionAfterNavigationSync() {
-        let coordinator = PeopleFeatureCoordinator(
+    @Test("selection is consumed once at the routing boundary")
+    func coordinatorConsumesSelection() {
+        let coordinator = makeCoordinator()
+        let user = PeopleFeatureFixtures.users[0]
+
+        coordinator.select(user)
+
+        #expect(coordinator.model.consumeSelectedUser() == user)
+        #expect(coordinator.selectedUserID == nil)
+        #expect(coordinator.model.consumeSelectedUser() == nil)
+    }
+
+    @Test("cross-feature requests are one-shot values")
+    func coordinatorEmitsOneShotSettingsRequest() {
+        let coordinator = makeCoordinator()
+        let request = OpenSettingsRequest(assigneeID: 1)
+
+        coordinator.openSettings(for: request)
+
+        #expect(coordinator.pendingSettingsRequestID != nil)
+        #expect(coordinator.consumeSettingsRequest() == request)
+        #expect(coordinator.consumeSettingsRequest() == nil)
+    }
+
+    @Test("router flow emits stack and modal events without a host")
+    func routerFlowIsDeterministic() {
+        let user = PeopleFeatureFixtures.users[0]
+        let navigation = FlowTestStore<PeopleRoute>()
+
+        navigation.send(.push(.detail(user)))
+        navigation.receiveNavigationChanged { from, to in
+            from.path.isEmpty && to.path == [.detail(user)]
+        }
+        navigation.receivePathChanged { old, new in
+            old.isEmpty && new == [.push(.detail(user))]
+        }
+        navigation.finish()
+
+        let modal = FlowTestStore<PeopleRoute>()
+        modal.send(.presentSheet(.overview([user])))
+        modal.receiveModalPresented { presentation in
+            presentation.route == .overview([user]) && presentation.style == .sheet
+        }
+        modal.receiveModalCommandIntercepted()
+        modal.receivePathChanged { old, new in
+            old.isEmpty && new == [.sheet(.overview([user]))]
+        }
+        modal.finish()
+    }
+
+    @Test("manual clock advances a sleeping effect without polling")
+    func manualClockControlsEffects() async throws {
+        let clock = ManualTestClock()
+        let store = TestStore(reducer: ClockReducer(), clock: clock)
+
+        await store.send(.start) {
+            $0.isWaiting = true
+        }
+        try await clock.advance(by: .seconds(1), onceSleepersReach: 1)
+        await store.receive(.finished) {
+            $0.isWaiting = false
+            $0.didFinish = true
+        }
+        await store.finish()
+    }
+
+    private func makeCoordinator() -> PeopleFeatureCoordinator {
+        PeopleFeatureCoordinator(
             input: PeopleFeatureInput(
                 fetchPeopleUseCase: FetchPeopleUseCase(repository: StubUserRepository())
             )
         )
-        PeopleFeatureTestRetainer.retain(coordinator)
-
-        coordinator.select(PeopleFeatureFixtures.users[0])
-        coordinator.syncNavigationFromSelection()
-
-        XCTAssertNil(coordinator.selectedUserID)
-    }
-
-    func testCoordinatorEmitsOneShotSettingsRequest() {
-        let coordinator = PeopleFeatureCoordinator(
-            input: PeopleFeatureInput(
-                fetchPeopleUseCase: FetchPeopleUseCase(repository: StubUserRepository())
-            )
-        )
-        PeopleFeatureTestRetainer.retain(coordinator)
-
-        coordinator.openSettings(for: OpenSettingsRequest(assigneeID: 1))
-
-        XCTAssertEqual(coordinator.pendingSettingsRequestID != nil, true)
-        XCTAssertEqual(coordinator.consumeSettingsRequest(), OpenSettingsRequest(assigneeID: 1))
-        XCTAssertNil(coordinator.consumeSettingsRequest())
     }
 }
 
@@ -58,28 +115,35 @@ private struct StubUserRepository: UserRepositoryProtocol {
     }
 }
 
-@MainActor
-private func waitUntil(
-    _ description: String,
-    timeoutNanoseconds: UInt64 = 1_000_000_000,
-    pollNanoseconds: UInt64 = 10_000_000,
-    condition: @escaping @MainActor () -> Bool
-) async {
-    let deadline = DispatchTime.now().uptimeNanoseconds + timeoutNanoseconds
+private struct ClockReducer: Reducer {
+    struct State: Equatable, Sendable, DefaultInitializable {
+        var isWaiting = false
+        var didFinish = false
 
-    while condition() == false, DispatchTime.now().uptimeNanoseconds < deadline {
-        await Task.yield()
-        try? await Task.sleep(nanoseconds: pollNanoseconds)
+        init() {}
     }
 
-    XCTAssertTrue(condition(), description)
-}
+    enum Action: Equatable, Sendable {
+        case start
+        case finished
+    }
 
-@MainActor
-private enum PeopleFeatureTestRetainer {
-    static var retainedObjects: [AnyObject] = []
-
-    static func retain(_ object: AnyObject) {
-        retainedObjects.append(object)
+    func reduce(into state: inout State, action: Action) -> EffectTask<Action> {
+        switch action {
+        case .start:
+            state.isWaiting = true
+            return .run { send, context in
+                do {
+                    try await context.sleep(for: .seconds(1))
+                } catch {
+                    return
+                }
+                await send(.finished)
+            }
+        case .finished:
+            state.isWaiting = false
+            state.didFinish = true
+            return .none
+        }
     }
 }
