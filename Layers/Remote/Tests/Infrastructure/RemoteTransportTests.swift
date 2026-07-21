@@ -1,10 +1,13 @@
 import Foundation
+import InnoNetwork
+import InnoNetworkTestSupport
 @testable import Remote
 import XCTest
 
 final class RemoteTransportTests: XCTestCase {
     func testSendAppliesRemoteHeadersAndDecodesResponse() async throws {
-        let session = StubURLSession(fixtures: ["/users": Self.usersFixture])
+        let session = MockURLSession()
+        session.setMockResponse(statusCode: 200, data: Self.usersFixture)
         let transport = RemoteClientFactory.makeTransport(
             baseURL: URL(string: "https://example.com")!,
             session: session
@@ -15,7 +18,7 @@ final class RemoteTransportTests: XCTestCase {
         XCTAssertEqual(users.count, 1)
         XCTAssertEqual(users.first?.city, "Seoul")
 
-        let request = await session.lastRequest
+        let request = session.capturedRequest
         XCTAssertEqual(request?.value(forHTTPHeaderField: "Accept-Language"), Locale.preferredLanguages.first ?? "ko-KR")
         XCTAssertNotNil(request?.value(forHTTPHeaderField: "Accept-Encoding"))
         XCTAssertEqual(request?.value(forHTTPHeaderField: "User-Agent"), "InnoSample/1.0.0 (\(RemotePlatformInfo.name))")
@@ -24,7 +27,8 @@ final class RemoteTransportTests: XCTestCase {
     }
 
     func testSendMapsStatusCodeFailureToRemoteFailure() async throws {
-        let session = StubURLSession(fixtures: ["/posts": Data("{}".utf8)], statusCode: 500)
+        let session = MockURLSession()
+        session.setMockResponse(statusCode: 500, data: Data("{}".utf8))
         let transport = RemoteClientFactory.makeTransport(
             baseURL: URL(string: "https://example.com")!,
             session: session
@@ -40,6 +44,27 @@ final class RemoteTransportTests: XCTestCase {
             XCTAssertEqual(code, 500)
             XCTAssertEqual(request?.url?.path, "/posts")
         }
+    }
+
+    func testMacroFirstContractsAndTypedStubClient() async throws {
+        let usersRequest = FetchUsersRequest()
+        let todosRequest = FetchTodosRequest()
+
+        XCTAssertEqual(usersRequest.method, .get)
+        XCTAssertEqual(usersRequest.path, "/users")
+        XCTAssertEqual(usersRequest.sessionAuthentication, .anonymous)
+        XCTAssertNil(usersRequest.parameters)
+        XCTAssertEqual(todosRequest.method, .get)
+        XCTAssertEqual(todosRequest.path, "/todos")
+        XCTAssertEqual(todosRequest.sessionAuthentication, .required)
+
+        let expected = try JSONDecoder().decode(FetchUsersRequest.APIResponse.self, from: Self.usersFixture)
+        let client = StubNetworkClient()
+        client.register(expected, for: usersRequest)
+
+        let users = try await RemoteTransport(client: client).send(usersRequest)
+
+        XCTAssertEqual(users.first?.name, "Alex")
     }
 
     private static let usersFixture = Data(

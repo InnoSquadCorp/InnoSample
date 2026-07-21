@@ -6,6 +6,7 @@ public enum ExternalPackageProduct: String {
     case innoFlowTesting = "InnoFlowTesting"
     case innoNetwork = "InnoNetwork"
     case innoNetworkPersistentCache = "InnoNetworkPersistentCache"
+    case innoNetworkTestSupport = "InnoNetworkTestSupport"
     case innoRouter = "InnoRouter"
     case innoRouterMacros = "InnoRouterMacros"
     case innoRouterTesting = "InnoRouterTesting"

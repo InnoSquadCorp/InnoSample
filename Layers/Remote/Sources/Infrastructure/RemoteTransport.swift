@@ -7,7 +7,7 @@ actor RemoteTransport {
         self.client = client
     }
 
-    func send<Request: RemoteRequest>(_ request: Request) async throws -> Request.APIResponse {
+    func send<Request: RemoteRequest & APIDefinition>(_ request: Request) async throws -> Request.APIResponse {
         do {
             return try await client.request(request)
         } catch {

@@ -14,7 +14,8 @@ let project = Project.leafLayer(
     testBuildableFolders: ["Tests"],
     testDependencies: [
         .package(.innoNetwork),
-        .package(.innoNetworkPersistentCache)
+        .package(.innoNetworkPersistentCache),
+        .package(.innoNetworkTestSupport)
     ],
     schemes: [
         Project.moduleScheme(

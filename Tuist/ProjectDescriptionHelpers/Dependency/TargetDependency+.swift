@@ -92,7 +92,7 @@ public extension Package {
     static var innoNetwork: Self {
         .remote(
             url: "https://github.com/InnoSquadCorp/InnoNetwork.git",
-            requirement: .exact("4.0.0")
+            requirement: .exact("5.0.0")
         )
     }
 

@@ -1,8 +1,9 @@
 import Data
+import InnoNetwork
 
+@APIDefinition(method: .get, path: "/users", auth: .anonymous)
 struct FetchUsersRequest: RemoteRequest {
     typealias APIResponse = [UserRemoteModel]
 
-    let featureName = "People"
-    let path = "/users"
+    var featureName: String { "People" }
 }
