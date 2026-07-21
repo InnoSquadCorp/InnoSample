@@ -15,7 +15,7 @@
 `InnoDI`, `InnoFlow`, `InnoNetwork`, `InnoRouter`를 쓰는 각 모듈은 독립 `Project.swift`로 관리하고, 루트는 `Workspace.swift`로 조립합니다.  
 Inno 라이브러리 의존성은 로컬 path package가 아니라 각 프로젝트 manifest의 remote package + exact version 고정 방식으로 소비합니다. 현재 기준 pin은 `InnoDI 5.1.0`, `InnoFlow 5.1.0`, `InnoNetwork 4.0.0`, `InnoRouter 5.2.1`입니다.
 
-기본 개발 환경은 `Xcode 26.4+`와 `Swift 6.3`입니다.
+기본 개발 환경은 `Xcode 26.4+`, `Swift 6.3`, `.mise.toml`에 고정한 `Tuist 4.67.2`입니다.
 
 상세 구조 평가와 개선 우선순위는 [Docs/ArchitectureReview.md](Docs/ArchitectureReview.md) 에 정리합니다.
 
