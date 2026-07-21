@@ -1,14 +1,20 @@
 import InnoRouter
-import InnoRouterMacros
+import SwiftUI
 
-/// App-level deep-link target. The pipeline resolves `innosample://...`
-/// URLs to one of these cases and `EntireTabCoordinator.handleDeepLink(_:)`
-/// translates them into tab + leaf coordinator intents. The enum is `Route`
-/// (via `@Routable`) so it can flow through `DeepLinkMatcher`, but the
-/// runtime navigation is performed by leaf coordinators rather than a flat
-/// `NavigationStore<SampleDeepLink>`.
-@Routable
-public enum SampleDeepLink: Hashable, Sendable {
+/// Command-only macro router. Its generated resolver admits exact app origins;
+/// the tab bridge translates the result into a tab selection and leaf route.
+@Router(
+    deepLinkSchemes: ["innosample"],
+    deepLinkHosts: ["host"]
+)
+public enum SampleDeepLink {
+    @DeepLink("/people/:userID")
     case peopleDetail(userID: Int)
+
+    @DeepLink("/settings/:assigneeID")
     case settingsDetail(assigneeID: Int)
+
+    public var destination: some View {
+        EmptyView()
+    }
 }

@@ -9,9 +9,7 @@ public struct LayerContainer {
     @Provide(.input)
     public var baseURL: URL
 
-    @Provide(.shared, factory: { (baseURL: URL) in
-        RemoteContainer(baseURL: baseURL)
-    }, concrete: true)
+    @Provide(.shared, RemoteContainer.self, with: [\Self.baseURL])
     var remoteContainer: RemoteContainer
 
     @Provide(.shared, factory: { (remoteContainer: RemoteContainer) in
@@ -21,7 +19,7 @@ public struct LayerContainer {
 
     @Provide(.shared, factory: { (remoteDataSources: any RemoteDataSourceContaining) in
         DataContainer(remoteContainer: remoteDataSources)
-    }, concrete: true)
+    })
     var dataContainer: DataContainer
 
     @Provide(.shared, factory: { (dataContainer: DataContainer) in
@@ -29,10 +27,9 @@ public struct LayerContainer {
     })
     var repositories: any RepositoryContaining
 
-    @SubContainer(
-        scope: .shared,
-        bindings: [(child: \DomainContainer.dataContainer, parent: \LayerContainer.repositories)]
-    )
+    @Provide(.shared, factory: { (repositories: any RepositoryContaining) in
+        DomainContainer(dataContainer: repositories)
+    })
     var domainContainer: DomainContainer
 
     // MARK: - Feature Surface

@@ -1,70 +1,88 @@
 @testable import Domain
+import InnoFlowTesting
+import InnoRouterTesting
 import PostsFeatureInterface
 @testable import PostsFeatureLogic
 @testable import PostsFeatureRouter
 import PostsFeatureTesting
-import XCTest
+import Testing
 
+@Suite("Posts feature")
 @MainActor
-final class PostsFeatureTests: XCTestCase {
-    func testModelLoadsPosts() async {
-        let model = PostsFeatureModel {
-            PostsFeatureFixtures.posts
-        }
-        PostsFeatureTestRetainer.retain(model)
+struct PostsFeatureTests {
+    @Test("phase-managed load is deterministic")
+    func reducerLoadsPosts() async {
+        let posts = PostsFeatureFixtures.posts
+        let store = TestStore(
+            reducer: PostsFeatureReducer(
+                dependencies: .init(loadPosts: { posts })
+            )
+        )
 
-        model.loadIfNeeded()
-        await waitUntil("posts are loaded") {
-            model.posts == PostsFeatureFixtures.posts && model.isLoading == false
+        await store.send(.onAppear, through: PostsFeatureReducer.phaseMap) {
+            $0.phase = .loading
+            $0.isLoading = true
+            $0.activityLog = ["initial posts load"]
         }
-
-        XCTAssertEqual(model.posts, PostsFeatureFixtures.posts)
-        XCTAssertFalse(model.isLoading)
+        await store.receive(.postsLoaded(posts), through: PostsFeatureReducer.phaseMap) {
+            $0.phase = .loaded
+            $0.isLoading = false
+            $0.hasLoaded = true
+            $0.posts = posts
+            $0.activityLog.append("loaded \(posts.count) posts")
+        }
+        await store.finish()
     }
 
-    func testCoordinatorClearsSelectionAfterNavigationSync() {
-        let coordinator = PostsFeatureCoordinator(
+    @Test("selection is consumed once at the routing boundary")
+    func coordinatorConsumesSelection() {
+        let coordinator = makeCoordinator()
+        let post = PostsFeatureFixtures.posts[0]
+
+        coordinator.select(post)
+
+        #expect(coordinator.model.consumeSelectedPost() == post)
+        #expect(coordinator.selectedPostID == nil)
+        #expect(coordinator.model.consumeSelectedPost() == nil)
+    }
+
+    @Test("router flow emits split-detail and sheet events without a host")
+    func routerFlowIsDeterministic() {
+        let post = PostsFeatureFixtures.posts[0]
+        let navigation = FlowTestStore<PostsRoute>()
+
+        navigation.send(.push(.detail(post)))
+        navigation.receiveNavigationChanged { from, to in
+            from.path.isEmpty && to.path == [.detail(post)]
+        }
+        navigation.receivePathChanged { old, new in
+            old.isEmpty && new == [.push(.detail(post))]
+        }
+        navigation.finish()
+
+        let modal = FlowTestStore<PostsRoute>()
+        modal.send(.presentSheet(.highlights([post])))
+        modal.receiveModalPresented { presentation in
+            presentation.route == .highlights([post]) && presentation.style == .sheet
+        }
+        modal.receiveModalCommandIntercepted()
+        modal.receivePathChanged { old, new in
+            old.isEmpty && new == [.sheet(.highlights([post]))]
+        }
+        modal.finish()
+    }
+
+    private func makeCoordinator() -> PostsFeatureCoordinator {
+        PostsFeatureCoordinator(
             input: PostsFeatureInput(
                 fetchPostsUseCase: FetchPostsUseCase(repository: StubPostRepository())
             )
         )
-        PostsFeatureTestRetainer.retain(coordinator)
-
-        coordinator.select(PostsFeatureFixtures.posts[0])
-        coordinator.syncNavigationFromSelection()
-
-        XCTAssertNil(coordinator.selectedPostID)
     }
 }
 
 private struct StubPostRepository: PostRepositoryProtocol {
     func fetchPosts() async throws -> [PostSummary] {
         PostsFeatureFixtures.posts
-    }
-}
-
-@MainActor
-private func waitUntil(
-    _ description: String,
-    timeoutNanoseconds: UInt64 = 1_000_000_000,
-    pollNanoseconds: UInt64 = 10_000_000,
-    condition: @escaping @MainActor () -> Bool
-) async {
-    let deadline = DispatchTime.now().uptimeNanoseconds + timeoutNanoseconds
-
-    while condition() == false, DispatchTime.now().uptimeNanoseconds < deadline {
-        await Task.yield()
-        try? await Task.sleep(nanoseconds: pollNanoseconds)
-    }
-
-    XCTAssertTrue(condition(), description)
-}
-
-@MainActor
-private enum PostsFeatureTestRetainer {
-    static var retainedObjects: [AnyObject] = []
-
-    static func retain(_ object: AnyObject) {
-        retainedObjects.append(object)
     }
 }

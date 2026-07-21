@@ -3,9 +3,11 @@ import ProjectDescriptionHelpers
 
 let project = Project.leafLayer(
     .data,
+    packages: [.innoDI],
     dependencies: [
         .layer(.domain),
-        .package(.innoDI)
+        .package(.innoDI),
+        .package(.innoDIDAGValidationPlugin)
     ],
     testBuildableFolders: ["Tests"],
     testDependencies: [

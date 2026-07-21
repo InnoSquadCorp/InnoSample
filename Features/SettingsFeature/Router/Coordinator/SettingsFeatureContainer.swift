@@ -1,14 +1,11 @@
 import InnoDI
 import SettingsFeatureInterface
 
-@MainActor
-@DIContainer
+@DIContainer(mainActor: true)
 public struct SettingsFeatureContainer {
     @Provide(.input)
     public var input: SettingsFeatureInput
 
-    @Provide(.transient, factory: { (input: SettingsFeatureInput) in
-        SettingsFeatureCoordinator(input: input)
-    }, concrete: true)
+    @Provide(.transient, SettingsFeatureCoordinator.self, with: [\Self.input])
     public var coordinator: SettingsFeatureCoordinator
 }

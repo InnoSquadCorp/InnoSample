@@ -3,11 +3,13 @@ import ProjectDescriptionHelpers
 
 let project = Project.layer(
     .layers,
+    packages: [.innoDI],
     dependencies: [
         .layer(.data),
         .layer(.domain),
         .layer(.remote),
-        .package(.innoDI)
+        .package(.innoDI),
+        .package(.innoDIDAGValidationPlugin)
     ],
     testDependencies: [
         .layer(.domain)

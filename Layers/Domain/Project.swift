@@ -3,8 +3,10 @@ import ProjectDescriptionHelpers
 
 let project = Project.layer(
     .domain,
+    packages: [.innoDI],
     dependencies: [
-        .package(.innoDI)
+        .package(.innoDI),
+        .package(.innoDIDAGValidationPlugin)
     ],
     testBuildableFolders: ["Tests"],
     schemes: [

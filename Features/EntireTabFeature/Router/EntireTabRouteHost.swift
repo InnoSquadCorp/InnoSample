@@ -1,4 +1,5 @@
 import EntireTabFeatureUI
+import EntireTabFeatureLogic
 import InnoRouter
 import SwiftUI
 
@@ -10,27 +11,19 @@ public struct EntireTabRouteHost: View {
     }
 
     public var body: some View {
+        RouterTabHost(
+            SampleTab.self,
+            initial: .people,
+            badges: [
+                .posts: EntireTabFeatureDefaults.postsBadge,
+                .settings: EntireTabFeatureDefaults.settingsBadge
+            ]
+        )
+            .environment(coordinator)
+            .background(EntireTabBackgroundView())
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
 #if os(macOS)
-        TabCoordinatorView(coordinator: coordinator)
-            .background(EntireTabBackgroundView(selectedTab: coordinator.selectedTab))
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .frame(minWidth: 1080, minHeight: 720)
-            .onChange(of: coordinator.peopleCoordinator.pendingSettingsRequestID, initial: false) { _, _ in
-                coordinator.syncCrossFeatureNavigationFromPeople()
-            }
-            .onChange(of: coordinator.settingsCoordinator.pendingPeopleRequestID, initial: false) { _, _ in
-                coordinator.syncCrossFeatureNavigationFromSettings()
-            }
-#else
-        TabCoordinatorView(coordinator: coordinator)
-            .background(EntireTabBackgroundView(selectedTab: coordinator.selectedTab))
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .onChange(of: coordinator.peopleCoordinator.pendingSettingsRequestID, initial: false) { _, _ in
-                coordinator.syncCrossFeatureNavigationFromPeople()
-            }
-            .onChange(of: coordinator.settingsCoordinator.pendingPeopleRequestID, initial: false) { _, _ in
-                coordinator.syncCrossFeatureNavigationFromSettings()
-            }
 #endif
     }
 }

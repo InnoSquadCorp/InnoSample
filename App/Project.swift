@@ -2,6 +2,7 @@ import ProjectDescription
 import ProjectDescriptionHelpers
 
 let project = Project.app(
+    packages: [.innoDI],
     infoPlistValues: [
         "CFBundleDisplayName": .string("InnoSample"),
         "CFBundleURLTypes": .array([
@@ -23,7 +24,8 @@ let project = Project.app(
         .layers,
         .thirdParty(.analytics),
         .thirdParty(interface: .analytics),
-        .package(.innoDISwiftUI)
+        .package(.innoDISwiftUI),
+        .package(.innoDIDAGValidationPlugin)
     ],
     testDependencies: [
         .features,

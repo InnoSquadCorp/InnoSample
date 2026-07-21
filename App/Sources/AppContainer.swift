@@ -7,7 +7,7 @@ import InnoDI
 import InnoDISwiftUI
 import Layers
 
-@MainActor
+@DIHierarchyRoot
 @DIContainer(root: true, mainActor: true)
 struct AppContainer {
     // MARK: - Inputs
@@ -19,14 +19,12 @@ struct AppContainer {
 
     @Provide(.shared, factory: {
         AnalyticsClient(apiKey: "innosample-demo-key")
-    }, concrete: true)
+    })
     var analyticsClient: AnalyticsClient
 
     // MARK: - Layer Composition
 
-    @Provide(.shared, factory: { (baseURL: URL) in
-        LayerContainer(baseURL: baseURL)
-    }, concrete: true)
+    @Provide(.shared, LayerContainer.self, with: [\Self.baseURL])
     var layerContainer: LayerContainer
 
     // MARK: - Root Features
@@ -45,6 +43,7 @@ struct AppContainer {
 
     // MARK: - Lifecycle
 
+    @MainActor
     func trackAppLaunched() async {
         await analyticsClient.track(.appLaunched)
     }

@@ -1,14 +1,11 @@
 import InnoDI
 import PeopleFeatureInterface
 
-@MainActor
-@DIContainer
+@DIContainer(mainActor: true)
 public struct PeopleFeatureContainer {
     @Provide(.input)
     public var input: PeopleFeatureInput
 
-    @Provide(.transient, factory: { (input: PeopleFeatureInput) in
-        PeopleFeatureCoordinator(input: input)
-    }, concrete: true)
+    @Provide(.transient, PeopleFeatureCoordinator.self, with: [\Self.input])
     public var coordinator: PeopleFeatureCoordinator
 }
