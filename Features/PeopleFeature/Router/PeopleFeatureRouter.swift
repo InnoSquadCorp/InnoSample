@@ -7,11 +7,11 @@ import PeopleFeatureLogic
 @Observable
 public final class PeopleFeatureCoordinator {
     let model: PeopleFeatureModel
-    let detailFactory: PeopleDetailFactoryPilot
+    let detailFactory: PeopleDetailContainer.AssistedFactory
 
     init(
         input: PeopleFeatureInput,
-        detailFactory: PeopleDetailFactoryPilot
+        detailFactory: PeopleDetailContainer.AssistedFactory
     ) {
         self.model = PeopleFeatureModel(loadPeople: input.fetchPeopleUseCase.callAsFunction)
         self.detailFactory = detailFactory

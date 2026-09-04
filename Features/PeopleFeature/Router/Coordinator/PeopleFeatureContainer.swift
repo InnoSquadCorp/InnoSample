@@ -1,15 +1,30 @@
-@_spi(Experimental) import InnoDI
+import InnoDI
 import PeopleFeatureInterface
 
 @DIContainer(mainActor: true)
 public struct PeopleFeatureContainer {
-    @Provide(.input)
+    @Input
     public var input: PeopleFeatureInput
 
-    @Provide(.transient, factory: { (input: PeopleFeatureInput) in
+    @SubContainerFactory(
+        PeopleDetailContainer.self,
+        bindings: [
+            (
+                child: \PeopleDetailContainer.input,
+                parent: \PeopleFeatureContainer.input
+            ),
+        ]
+    )
+    var detailFactory: PeopleDetailContainer.AssistedFactory
+
+    @Provide(.transient, factory: {
+        (
+            input: PeopleFeatureInput,
+            detailFactory: PeopleDetailContainer.AssistedFactory
+        ) in
         PeopleFeatureCoordinator(
             input: input,
-            detailFactory: PeopleDetailFactoryPilot(input: input)
+            detailFactory: detailFactory
         )
     })
     public var coordinator: PeopleFeatureCoordinator

@@ -94,7 +94,9 @@ struct EntireTabFeatureTests {
         return EntireTabCoordinator(
             peopleCoordinator: .init(
                 input: peopleInput,
-                detailFactory: PeopleDetailFactoryPilot(input: peopleInput)
+                detailFactory: PeopleDetailContainer.AssistedFactory(
+                    input: peopleInput
+                )
             ),
             postsCoordinator: .init(
                 input: .init(

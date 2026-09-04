@@ -38,7 +38,7 @@ private struct PeopleDetailFeature: View {
     private let onOpenSettings: (OpenSettingsRequest) -> Void
 
     init(
-        factory: PeopleDetailFactoryPilot,
+        factory: PeopleDetailContainer.AssistedFactory,
         user: PeopleUser,
         onOpenSettings: @escaping (OpenSettingsRequest) -> Void
     ) {
