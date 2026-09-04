@@ -75,9 +75,10 @@ struct PeopleFeatureTests {
             user: secondUser
         )
         let overridden = coordinator.detailFactory(
-            user: firstUser,
-            replacingSession: replacement
-        )
+            user: firstUser
+        ) { overrides in
+            overrides.session = replacement
+        }
         #expect(overridden.session === replacement)
     }
 
@@ -141,7 +142,7 @@ struct PeopleFeatureTests {
         )
         return PeopleFeatureCoordinator(
             input: input,
-            detailFactory: PeopleDetailFactoryPilot(input: input)
+            detailFactory: PeopleDetailContainer.AssistedFactory(input: input)
         )
     }
 }
