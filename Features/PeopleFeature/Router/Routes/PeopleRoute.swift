@@ -24,7 +24,33 @@ private struct PeopleDetailDestination: View {
     let user: PeopleUser
 
     var body: some View {
-        PeopleDetailScreen(user: user, onOpenSettings: coordinator.openSettings)
+        PeopleDetailFeature(
+            factory: coordinator.detailFactory,
+            user: user,
+            onOpenSettings: coordinator.openSettings
+        )
+    }
+}
+
+private struct PeopleDetailFeature: View {
+    @State private var container: PeopleDetailContainer
+
+    private let onOpenSettings: (OpenSettingsRequest) -> Void
+
+    init(
+        factory: PeopleDetailFactoryPilot,
+        user: PeopleUser,
+        onOpenSettings: @escaping (OpenSettingsRequest) -> Void
+    ) {
+        _container = State(initialValue: factory(user: user))
+        self.onOpenSettings = onOpenSettings
+    }
+
+    var body: some View {
+        PeopleDetailScreen(
+            user: container.session.user,
+            onOpenSettings: onOpenSettings
+        )
     }
 }
 

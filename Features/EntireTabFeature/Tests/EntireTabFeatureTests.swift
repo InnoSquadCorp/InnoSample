@@ -85,13 +85,16 @@ struct EntireTabFeatureTests {
     }
 
     private func makeCoordinator() -> EntireTabCoordinator {
-        EntireTabCoordinator(
+        let peopleInput = PeopleFeatureInput(
+            fetchPeopleUseCase: FetchPeopleUseCase(
+                repository: StubUserRepository(users: Self.users)
+            )
+        )
+
+        return EntireTabCoordinator(
             peopleCoordinator: .init(
-                input: .init(
-                    fetchPeopleUseCase: FetchPeopleUseCase(
-                        repository: StubUserRepository(users: Self.users)
-                    )
-                )
+                input: peopleInput,
+                detailFactory: PeopleDetailFactoryPilot(input: peopleInput)
             ),
             postsCoordinator: .init(
                 input: .init(

@@ -7,9 +7,14 @@ import PeopleFeatureLogic
 @Observable
 public final class PeopleFeatureCoordinator {
     let model: PeopleFeatureModel
+    let detailFactory: PeopleDetailFactoryPilot
 
-    init(input: PeopleFeatureInput) {
+    init(
+        input: PeopleFeatureInput,
+        detailFactory: PeopleDetailFactoryPilot
+    ) {
         self.model = PeopleFeatureModel(loadPeople: input.fetchPeopleUseCase.callAsFunction)
+        self.detailFactory = detailFactory
     }
 
     var selectedUserID: Int? { model.selectedUserID }
