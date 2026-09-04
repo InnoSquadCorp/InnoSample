@@ -46,6 +46,41 @@ struct PeopleFeatureTests {
         #expect(coordinator.model.consumeSelectedUser() == nil)
     }
 
+    @Test("assisted detail children isolate shared state per route value")
+    func assistedDetailChildrenOwnIndependentSharedState() {
+        let coordinator = makeCoordinator()
+        let firstUser = PeopleFeatureFixtures.users[0]
+        let secondUser = PeopleUser(
+            id: 2,
+            name: "Ervin Howell",
+            username: "Antonette",
+            email: "ervin@example.com",
+            phone: "010-3333-4444",
+            website: "example.net",
+            company: "InnoSquad",
+            city: "Busan"
+        )
+
+        let first = coordinator.detailFactory(user: firstUser)
+        let second = coordinator.detailFactory(user: secondUser)
+
+        #expect(first.session.user.id == 1)
+        #expect(second.session.user.id == 2)
+        #expect(first.session !== second.session)
+        let firstSession = first.session
+        #expect(firstSession === first.session)
+
+        let replacement = PeopleDetailSession(
+            input: first.input,
+            user: secondUser
+        )
+        let overridden = coordinator.detailFactory(
+            user: firstUser,
+            replacingSession: replacement
+        )
+        #expect(overridden.session === replacement)
+    }
+
     @Test("cross-feature requests are one-shot values")
     func coordinatorEmitsOneShotSettingsRequest() {
         let coordinator = makeCoordinator()
@@ -101,10 +136,12 @@ struct PeopleFeatureTests {
     }
 
     private func makeCoordinator() -> PeopleFeatureCoordinator {
-        PeopleFeatureCoordinator(
-            input: PeopleFeatureInput(
-                fetchPeopleUseCase: FetchPeopleUseCase(repository: StubUserRepository())
-            )
+        let input = PeopleFeatureInput(
+            fetchPeopleUseCase: FetchPeopleUseCase(repository: StubUserRepository())
+        )
+        return PeopleFeatureCoordinator(
+            input: input,
+            detailFactory: PeopleDetailFactoryPilot(input: input)
         )
     }
 }
