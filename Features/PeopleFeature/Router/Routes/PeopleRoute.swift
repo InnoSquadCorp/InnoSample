@@ -1,3 +1,4 @@
+import InnoDISwiftUI
 import InnoRouter
 import PeopleFeatureInterface
 import PeopleFeatureUI
@@ -33,8 +34,8 @@ private struct PeopleDetailDestination: View {
 }
 
 private struct PeopleDetailFeature: View {
-    @State private var container: PeopleDetailContainer
-
+    private let factory: PeopleDetailContainer.AssistedFactory
+    private let user: PeopleUser
     private let onOpenSettings: (OpenSettingsRequest) -> Void
 
     init(
@@ -42,14 +43,33 @@ private struct PeopleDetailFeature: View {
         user: PeopleUser,
         onOpenSettings: @escaping (OpenSettingsRequest) -> Void
     ) {
-        _container = State(initialValue: factory(user: user))
+        self.factory = factory
+        self.user = user
         self.onOpenSettings = onOpenSettings
     }
 
     var body: some View {
-        PeopleDetailScreen(
-            user: container.session.user,
-            onOpenSettings: onOpenSettings
+        DIContainerHost(
+            identity: user,
+            factory: { user in factory(user: user) },
+            content: { container, _ in
+                PeopleDetailScreen(
+                    user: container.session.user,
+                    onOpenSettings: onOpenSettings
+                )
+            },
+            loading: {
+                ProgressView()
+            },
+            failure: { _, lifecycle in
+                ContentUnavailableView {
+                    Label("사용자 화면을 열 수 없습니다", systemImage: "person.crop.circle.badge.exclamationmark")
+                } actions: {
+                    Button("다시 시도") {
+                        lifecycle.retry()
+                    }
+                }
+            }
         )
     }
 }

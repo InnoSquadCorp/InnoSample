@@ -19,6 +19,7 @@ let project = Project.feature(
         router: [
             .package(.innoDI),
             .package(.innoDIDAGValidationPlugin),
+            .package(.innoDISwiftUI),
             .package(.innoRouter),
             .package(.innoRouterMacros)
         ],

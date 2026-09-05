@@ -14,6 +14,7 @@ let project = Project.rootFeatures(
         .feature(interface: .settings),
         .layer(.domain),
         .package(.innoDI),
+        .package(.innoDISwiftUI),
         .package(.innoDIDAGValidationPlugin)
     ],
     testDependencies: [
