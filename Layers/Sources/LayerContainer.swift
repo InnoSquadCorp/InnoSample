@@ -6,7 +6,7 @@ import Remote
 
 @DIContainer
 public struct LayerContainer {
-    @Provide(.input)
+    @Input
     public var baseURL: URL
 
     @Provide(.shared, RemoteContainer.self, with: [\Self.baseURL])

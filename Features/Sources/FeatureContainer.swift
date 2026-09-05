@@ -8,11 +8,10 @@ import PostsFeatureRouter
 import SettingsFeatureInterface
 import SettingsFeatureRouter
 
-@DIComponent
-@DIContainer(mainActor: true)
+@DIContainerRole(role: ContainerRole.component, mainActor: true)
 public struct FeatureContainer {
     // Features only depend on the narrow domain use case surface, not the DomainContainer concrete type.
-    @Provide(.input)
+    @Input
     public var useCases: any FeatureUseCaseContaining
 
     @Provide(.shared, factory: { (useCases: any FeatureUseCaseContaining) in

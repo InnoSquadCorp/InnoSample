@@ -3,7 +3,7 @@ import InnoDI
 
 @DIContainer
 public struct DataContainer {
-    @Provide(.input)
+    @Input
     public var remoteContainer: any RemoteDataSourceContaining
 
     // Data owns repositories and keeps them shared.

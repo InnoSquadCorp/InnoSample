@@ -1,9 +1,9 @@
 import InnoDI
 import PostsFeatureInterface
 
-@DIContainer(mainActor: true)
+@DIContainerRole(role: ContainerRole.local, mainActor: true)
 public struct PostsFeatureContainer {
-    @Provide(.input)
+    @Input
     public var input: PostsFeatureInput
 
     @Provide(.transient, PostsFeatureCoordinator.self, with: [\Self.input])
