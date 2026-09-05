@@ -2,7 +2,7 @@ import InnoDI
 
 @DIContainer
 public struct DomainContainer: FeatureUseCaseContaining {
-    @Provide(.input)
+    @Input
     public var dataContainer: any RepositoryContaining
 
     // Domain composes stateless use cases over shared repositories.
