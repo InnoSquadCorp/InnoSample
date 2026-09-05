@@ -1,9 +1,9 @@
 import InnoDI
 import SettingsFeatureInterface
 
-@DIContainer(mainActor: true)
+@DIContainerRole(role: ContainerRole.local, mainActor: true)
 public struct SettingsFeatureContainer {
-    @Provide(.input)
+    @Input
     public var input: SettingsFeatureInput
 
     @Provide(.transient, SettingsFeatureCoordinator.self, with: [\Self.input])

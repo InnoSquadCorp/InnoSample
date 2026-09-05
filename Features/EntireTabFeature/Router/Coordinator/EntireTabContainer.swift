@@ -3,16 +3,15 @@ import PeopleFeatureRouter
 import PostsFeatureRouter
 import SettingsFeatureRouter
 
-@DIComponent
-@DIContainer(mainActor: true)
+@DIContainerRole(role: ContainerRole.component, mainActor: true)
 public struct EntireTabContainer {
-    @Provide(.input)
+    @Input
     public var peopleCoordinator: PeopleFeatureCoordinator
 
-    @Provide(.input)
+    @Input
     public var postsCoordinator: PostsFeatureCoordinator
 
-    @Provide(.input)
+    @Input
     public var settingsCoordinator: SettingsFeatureCoordinator
 
     @Provide(.transient, factory: {

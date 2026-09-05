@@ -7,12 +7,11 @@ import InnoDI
 import InnoDISwiftUI
 import Layers
 
-@DIHierarchyRoot
-@DIContainer(root: true, mainActor: true)
+@DIContainerRole(role: ContainerRole.root, mainActor: true)
 struct AppContainer {
     // MARK: - Inputs
 
-    @Provide(.input)
+    @Input
     var baseURL: URL
 
     // MARK: - Infrastructure

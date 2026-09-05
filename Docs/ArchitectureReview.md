@@ -18,7 +18,7 @@
 
 | Package | Version | Current sample usage |
 | --- | --- | --- |
-| `InnoDI` | `eaee869` revision | 공개 `@Input(.assisted)`·`@AssistedFactory`·`DIContainerHost`, `InnoDIDAGValidationPlugin` |
+| `InnoDI` | `82c9074` revision | 공개 `@Input(.assisted)`·`@AssistedFactory`·`DIContainerHost`, `InnoDIDAGValidationPlugin` |
 | `InnoFlow` | `5.1.0` | `@InnoFlow(phaseManaged: true)`, `PhaseMap`, cancellable effects, `@BindableField`, `StoreInstrumentation`, `TestStore`, `ManualTestClock` |
 | `InnoNetwork` | `5.0.0` | `@APIDefinition`, `NetworkClient.request(_:)`, explicit auth, scoped refresh, typed headers, persistent cache, `InnoNetworkTestSupport` |
 | `InnoRouter` | `5.2.1` | `@Router`, `@TabItem`, `@DeepLink`, macro hosts, `@EnvironmentRouter`, `FlowTestStore` |
@@ -42,7 +42,7 @@
 - `@Provide(...self, with:)`의 type-based factory dependency와 `@SubContainer(bindings:)` edge를 사용합니다.
 - 각 relevant target은 `InnoDIDAGValidationPlugin`을 연결해 declaration/DAG validation을 빌드에 포함합니다.
 - People 상세 화면은 route의 `PeopleUser`를 assisted input으로 받아 child container를 생성합니다. 서로 다른 route 값은 독립된 shared session을 가지며, 같은 child 내부에서는 identity를 유지하고 테스트 override도 적용됩니다.
-- 파일럿은 공개 6.0 preparation surface와 InnoDI revision `eaee869c4518fd2cd102e6ec750a05cde16c50ac`에 의도적으로 고정합니다. People detail route는 수동 `@State` container 대신 `DIContainerHost`의 identity·retry 수명 계약을 실제로 사용합니다. RFC 0006이 Draft인 동안 최종 6.0 정식 API로 간주하지 않습니다.
+- 파일럿은 공개 6.0 preparation surface와 InnoDI revision `82c9074aed63a083a09961995bd867cc45ad9925`에 의도적으로 고정합니다. People detail route는 수동 `@State` container 대신 `DIContainerHost`의 identity·retry 수명 계약을 실제로 사용합니다. RFC 0006이 Draft인 동안 최종 6.0 정식 API로 간주하지 않습니다.
 
 revision `e1f0d12`에서는 child 선언이 source-visible nested `AssistedFactory`를 소유하고 parent가 `@SubContainerFactory`로 ordinary input을 바인딩합니다. 같은 Xcode target의 다른 source file에서도 actor-isolated generated initializer와 assisted call이 노출되어 기존 `PeopleDetailFactoryPilot` wrapper와 `_spi(Experimental)` import를 제거했습니다. child의 `PeopleFeatureInput`은 parent가 고정하고 `PeopleUser`는 route 호출 시 전달되며, 서로 다른 호출의 `.shared` session 격리와 override 흐름을 테스트합니다.
 
@@ -89,7 +89,7 @@ revision `e1f0d12`에서는 child 선언이 source-visible nested `AssistedFacto
 6. root Features tests
 7. generic iOS app build
 
-generated workspace가 InnoDI revision `eaee869c4518fd2cd102e6ec750a05cde16c50ac`와 나머지 exact release를 resolve하는지도 별도로 확인합니다. 현재 최종 변경 기준으로 Remote 16개와 feature 25개, 총 41개 테스트 및 generic iOS app/embedded watch app build를 포함한 전체 gate가 통과했습니다.
+generated workspace가 InnoDI revision `82c9074aed63a083a09961995bd867cc45ad9925`와 나머지 exact release를 resolve하는지도 별도로 확인합니다. 현재 최종 변경 기준으로 Remote 16개와 feature 25개, 총 41개 테스트 및 generic iOS app/embedded watch app build를 포함한 전체 gate가 통과했습니다.
 
 ## Recommended Next Sequence
 

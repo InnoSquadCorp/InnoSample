@@ -5,7 +5,7 @@ import InnoNetwork
 
 @DIContainer
 public struct RemoteContainer {
-    @Provide(.input)
+    @Input
     public var baseURL: URL
 
     @Provide(.shared, factory: { (baseURL: URL) in

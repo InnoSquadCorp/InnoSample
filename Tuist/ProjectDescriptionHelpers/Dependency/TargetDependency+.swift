@@ -78,7 +78,7 @@ public extension Package {
     static var innoDI: Self {
         .remote(
             url: "https://github.com/InnoSquadCorp/InnoDI.git",
-            requirement: .revision("28a95a5b146de6f79668e53156cece9aea3fa8c0")
+            requirement: .revision("82c9074aed63a083a09961995bd867cc45ad9925")
         )
     }
 

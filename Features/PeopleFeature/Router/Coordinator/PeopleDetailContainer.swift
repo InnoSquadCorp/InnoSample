@@ -1,7 +1,7 @@
 import InnoDI
 import PeopleFeatureInterface
 
-@DIContainer(mainActor: true)
+@DIContainerRole(role: ContainerRole.local, mainActor: true)
 public struct PeopleDetailContainer {
     @Input
     public var input: PeopleFeatureInput
