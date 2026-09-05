@@ -13,7 +13,7 @@
 - `App -> Layers + Features + ThirdParty`
 
 `InnoDI`, `InnoFlow`, `InnoNetwork`, `InnoRouter`를 쓰는 각 모듈은 독립 `Project.swift`로 관리하고, 루트는 `Workspace.swift`로 조립합니다.  
-Inno 라이브러리 의존성은 로컬 path package가 아니라 각 프로젝트 manifest의 remote package 고정 방식으로 소비합니다. 현재 기준 pin은 InnoDI 6.0 container-host 파일럿 revision `82c9074aed63a083a09961995bd867cc45ad9925`, `InnoFlow 5.1.0`, `InnoNetwork 5.0.0`, `InnoRouter 5.2.1`입니다.
+Inno 라이브러리 의존성은 로컬 path package가 아니라 각 프로젝트 manifest의 remote package 고정 방식으로 소비합니다. 현재 기준 pin은 InnoDI 6.0 공개 계약 후보 revision `f1a3eaccf19bfc43164de3621c9197c731d92342`, `InnoFlow 5.1.0`, `InnoNetwork 5.0.0`, `InnoRouter 5.2.1`입니다.
 
 기본 개발 환경은 `Xcode 26.4+` 또는 `Xcode 27.x`, Swift language mode `6.3`, `.mise.toml`에 고정한 `Tuist 4.202.5`입니다. InnoNetwork 5.0의 default `Macros` package trait를 Tuist XcodeProj에서 보존하려면 이 버전이 필요합니다.
 
@@ -368,13 +368,13 @@ make verify
 
 | Package | Version | Sample surface |
 | --- | --- | --- |
-| `InnoDI` | `6.0 pilot @ 82c9074` | 공개 `@Input(.assisted)`·`@AssistedFactory`·`DIContainerHost`, Xcode/Tuist DAG validation plugin |
+| `InnoDI` | `6.0 candidate @ f1a3eac` | 공개 `@Input(.assisted)`·`@AssistedFactory`·`DIContainerHost`, Xcode/Tuist DAG validation plugin |
 | `InnoFlow` | `5.1.0` | `@InnoFlow(phaseManaged: true)`, `PhaseMap`, `EffectTask.cancellable`, `@BindableField`, `StoreInstrumentation`, `TestStore`, `ManualTestClock` |
 | `InnoNetwork` | `5.0.0` | `@APIDefinition(method:path:auth:)`, `NetworkClient.request(_:)`, `RefreshTokenPolicy(appliesTo:)`, `AuthPack`, `CachePack`, `InnoNetworkPersistentCache`, `MockURLSession`, `StubNetworkClient` |
 | `InnoRouter` | `5.2.1` | `@Router`, `@TabItem`, `@DeepLink`, `RouterHost`, `RouterSplitHost`, `RouterTabHost`, `@EnvironmentRouter`, `FlowTestStore` |
 
 현재 확인된 검증 상태:
 - fresh `tuist generate --no-open`: 통과
-- generated workspace resolution: InnoDI revision `82c9074aed63a083a09961995bd867cc45ad9925` 및 나머지 exact version과 일치
+- generated workspace resolution: InnoDI revision `f1a3eaccf19bfc43164de3621c9197c731d92342` 및 나머지 exact version과 일치
 - Remote 16개 + feature 25개, 총 41개 테스트와 generic iOS app/embedded watch app build: 통과
 - 전체 `make verify-ci`: 통과 (2026-09-05, Xcode 27.0, Tuist 4.202.5)
