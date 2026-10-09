@@ -14,7 +14,7 @@ public struct EntireTabContainer {
     @Input
     public var settingsCoordinator: SettingsFeatureCoordinator
 
-    @Provide(.transient, factory: {
+    @Provide(.shared, factory: {
         (
             peopleCoordinator: PeopleFeatureCoordinator,
             postsCoordinator: PostsFeatureCoordinator,

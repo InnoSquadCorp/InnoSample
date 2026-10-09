@@ -6,6 +6,6 @@ public struct PostsFeatureContainer {
     @Input
     public var input: PostsFeatureInput
 
-    @Provide(.transient, PostsFeatureCoordinator.self, with: [\Self.input])
+    @Provide(.shared, PostsFeatureCoordinator.self, with: [\Self.input])
     public var coordinator: PostsFeatureCoordinator
 }

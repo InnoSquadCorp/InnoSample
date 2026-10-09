@@ -22,7 +22,8 @@ public final class SettingsFeatureModel {
     public var activityLog: [String] { store.activityLog }
     public var selectedTodoID: Int? { store.selectedTodo?.id }
     public var pendingDigestToken: UUID? { store.pendingDigestRequest?.id }
-    public var pendingPeopleRequestID: UUID? { store.pendingPeopleRequest?.id }
+    private var pendingPeopleRequest: SettingsPeopleRequest?
+    public var pendingPeopleRequestID: UUID? { pendingPeopleRequest?.id }
     public var showsCompletedOnly: Bool { store.showsCompletedOnly }
 
     public func loadIfNeeded() { store.send(.onAppear) }
@@ -32,8 +33,16 @@ public final class SettingsFeatureModel {
     public func refresh() { store.send(.refresh) }
     public func select(_ todo: TodoSummary) { store.send(.select(todo)) }
     public func showDigest() { store.send(.showDigest) }
-    public func openPeople(userID: Int) {
-        store.send(.openPeople(.init(userID: userID)))
+    public func acknowledgeDigest() { store.send(.acknowledgeDigest) }
+    public func openPeople(userID: Int) async {
+        let dispatch = store.send(.openPeople(.init(userID: userID)), capturingOutputs: .bufferingNewest(1))
+        for await output in dispatch.outputs {
+            switch output {
+            case .openPeople(let request):
+                pendingPeopleRequest = SettingsPeopleRequest(request: request)
+            }
+        }
+        await dispatch.finish()
     }
     public func openTodoDetail(forAssigneeID assigneeID: Int) {
         store.send(.openTodoDetailForAssignee(assigneeID))
@@ -54,9 +63,9 @@ public final class SettingsFeatureModel {
     }
 
     public func consumePeopleRequest() -> OpenPeopleRequest? {
-        let request = store.pendingPeopleRequest?.request
+        let request = pendingPeopleRequest?.request
         guard let request else { return nil }
-        store.send(.clearPeopleRequest)
+        pendingPeopleRequest = nil
         return request
     }
 }

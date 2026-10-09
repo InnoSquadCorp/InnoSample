@@ -62,9 +62,9 @@ public struct FeatureContainer {
     @SubContainer(
         scope: .shared,
         bindings: [
-            (child: \EntireTabContainer.peopleCoordinator, parent: \FeatureContainer.peopleCoordinator),
-            (child: \EntireTabContainer.postsCoordinator, parent: \FeatureContainer.postsCoordinator),
-            (child: \EntireTabContainer.settingsCoordinator, parent: \FeatureContainer.settingsCoordinator),
+            (child: \EntireTabContainer.peopleCoordinator, parent: \Self.peopleCoordinator),
+            (child: \EntireTabContainer.postsCoordinator, parent: \Self.postsCoordinator),
+            (child: \EntireTabContainer.settingsCoordinator, parent: \Self.settingsCoordinator),
         ]
     )
     var entireTabContainer: EntireTabContainer

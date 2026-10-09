@@ -66,8 +66,6 @@ public extension TargetDependency {
         switch product {
         case .innoDIDAGValidationPlugin:
             return .package(product: product.rawValue, type: .plugin)
-        case .innoRouterMacros:
-            return .package(product: product.rawValue, type: .macro)
         default:
             return .package(product: product.rawValue)
         }
@@ -78,28 +76,28 @@ public extension Package {
     static var innoDI: Self {
         .remote(
             url: "https://github.com/InnoSquadCorp/InnoDI.git",
-            requirement: .revision("f1a3eaccf19bfc43164de3621c9197c731d92342")
+            requirement: .exact("7.0.1")
         )
     }
 
     static var innoFlow: Self {
         .remote(
             url: "https://github.com/InnoSquadCorp/InnoFlow",
-            requirement: .exact("5.1.0")
+            requirement: .exact("6.0.2")
         )
     }
 
     static var innoNetwork: Self {
         .remote(
             url: "https://github.com/InnoSquadCorp/InnoNetwork.git",
-            requirement: .exact("5.0.0")
+            requirement: .exact("6.1.1")
         )
     }
 
     static var innoRouter: Self {
         .remote(
             url: "https://github.com/InnoSquadCorp/InnoRouter.git",
-            requirement: .exact("5.2.1")
+            requirement: .exact("7.0.0")
         )
     }
 }

@@ -6,6 +6,6 @@ public struct SettingsFeatureContainer {
     @Input
     public var input: SettingsFeatureInput
 
-    @Provide(.transient, SettingsFeatureCoordinator.self, with: [\Self.input])
+    @Provide(.shared, SettingsFeatureCoordinator.self, with: [\Self.input])
     public var coordinator: SettingsFeatureCoordinator
 }

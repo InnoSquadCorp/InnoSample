@@ -45,10 +45,10 @@ struct FeatureContainerTests {
     }
 
     @Test("root composition mediates people to settings with a typed tab")
-    func mediatesPeopleToSettingsNavigation() {
+    func mediatesPeopleToSettingsNavigation() async {
         let coordinator = makeContainer().coordinator
 
-        coordinator.peopleCoordinator.openSettings(for: .init(assigneeID: 1))
+        await coordinator.peopleCoordinator.openSettings(for: .init(assigneeID: 1))
 
         #expect(coordinator.consumeCrossFeatureNavigationFromPeople() == .settings)
         #expect(
@@ -59,10 +59,10 @@ struct FeatureContainerTests {
     }
 
     @Test("root composition mediates settings to people with a typed tab")
-    func mediatesSettingsToPeopleNavigation() {
+    func mediatesSettingsToPeopleNavigation() async {
         let coordinator = makeContainer().coordinator
 
-        coordinator.settingsCoordinator.openPeople(for: .init(userID: 1))
+        await coordinator.settingsCoordinator.openPeople(for: .init(userID: 1))
 
         #expect(coordinator.consumeCrossFeatureNavigationFromSettings() == .people)
         #expect(

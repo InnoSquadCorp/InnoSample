@@ -1,104 +1,125 @@
 # InnoSample Architecture Review
 
-기준일: 2026-09-04 (InnoDI 6.0 pre-release pilot 포함)
+기준일: 2026-10-10. 공개 stable release의 버전과 commit을 확인하고 해당 태그의 코드·전용 스킬을 기준으로 소비 API를 선택합니다.
 
-이 문서는 현재 `InnoSample`이 Inno 라이브러리의 macro-first surface를 실제 구조와 테스트에서 얼마나 활용하는지 기록합니다. 검증 결과는 설계 평가와 분리하며, 마지막 전체 gate를 다시 통과한 시점에만 확정합니다. 현재 checkout은 2026-09-04 Xcode 27.0에서 `make verify-ci`를 통과했습니다.
+## Resolved release contract
 
-## Scorecard
-
-| Area | Assessment | Current usage |
+| Library | Version | Reviewed release commit |
 | --- | --- | --- |
-| Architecture | Strong | `App -> Layers / Features / ThirdParty`와 feature 다중 타깃 경계 |
-| InnoDI 6.0 pilot | Macro-first + experimental | strict hierarchy + assisted child factory + SwiftUI container host + DAG validation plugin |
-| InnoFlow 5.1 | Macro-first | phase-managed reducers + deterministic testing surface |
-| InnoRouter 5.2.1 | Macro-first | generated routers, hosts, tabs, deep links, environment routing |
-| InnoNetwork 5.0 | Macro-first | generated endpoint contracts, explicit auth, advanced packs, persistent cache, consumer test support |
+| InnoDI | 7.0.1 | `ce47cf4b207c3b8810b2a7d7d622a2f8ead3ed96` |
+| InnoFlow | 6.0.2 | `1176de1e4783b638c03a9334f43cc49378957148` |
+| InnoNetwork | 6.1.1 | `44e4ca28c50c03f817231a077c0f3bdfdbc859c8` |
+| InnoRouter | 7.0.0 | `33b0da7639105cfa8e6f5acffa3badb91b5e0254` |
 
-## Current Dependency Surface
+각 project는 exact remote package를 소비합니다. 로컬 library checkout이나 moving main을 제품 의존성으로 사용하지 않습니다. `make verify-versions`는 manifest와 실제 generated lockfile을 대조합니다. Xcode 27.1 / Swift 6.4 / SwiftSyntax 604.0.0 / Tuist 4.202.5를 검증 도구로 사용합니다.
 
-| Package | Version | Current sample usage |
-| --- | --- | --- |
-| `InnoDI` | `f1a3eac` revision | 공개 `@Input(.assisted)`·`@AssistedFactory`·`DIContainerHost`, `InnoDIDAGValidationPlugin` |
-| `InnoFlow` | `5.1.0` | `@InnoFlow(phaseManaged: true)`, `PhaseMap`, cancellable effects, `@BindableField`, `StoreInstrumentation`, `TestStore`, `ManualTestClock` |
-| `InnoNetwork` | `5.0.0` | `@APIDefinition`, `NetworkClient.request(_:)`, explicit auth, scoped refresh, typed headers, persistent cache, `InnoNetworkTestSupport` |
-| `InnoRouter` | `5.2.1` | `@Router`, `@TabItem`, `@DeepLink`, macro hosts, `@EnvironmentRouter`, `FlowTestStore` |
+## Ownership and module boundaries
 
-의존성은 각 project manifest가 remote package requirement로 선언합니다. InnoDI만 6.0 파일럿 revision을 고정하고 나머지는 exact release를 사용합니다. `Tuist/Package.swift`는 per-project package 선언과 중복되지 않도록 dependency 목록을 비워 두며, generated `Package.resolved`는 저장소에 추적하지 않습니다.
+- App: UI actor 위의 root container, analytics와 Layers/Features 연결.
+- Layers: Remote → Data → Domain의 순차 조립과 feature-facing concrete use case 노출.
+- Features: leaf coordinator와 EntireTab coordinator 조립.
+- Logic: domain state/action/effect/output. SwiftUI와 InnoRouter를 import하지 않습니다.
+- UI: renderable model과 callback. Domain/Remote/Data/InnoRouter를 직접 import하지 않습니다.
+- Router: host, route, presentation result, URL와 sibling mediation의 경계.
 
-## Architecture Assessment
+DI role은 실제 graph ownership과 일치시킵니다. App은 `ContainerRole.root`, `@SubContainer`로 마운트하는 FeatureContainer/EntireTabContainer는 `component`, 순차 provider composition과 leaf의 local factory는 `local`입니다. 7.0.1 factory root parameter는 `@Input`/`@Provide` member를 참조합니다. 하위 container에서 다시 interface를 뽑아 다른 provider에 전달하는 순차 조립은 typed provider/factory로 선언합니다. 모든 container 선언 target과 test fixture target에 DAG plugin을 연결합니다.
 
-현재 구조의 강점은 다음과 같습니다.
+Coordinator와 feature Store는 container의 shared scope를 유지합니다. 같은 container를 다시 읽어도 새 navigation/business authority를 만들지 않습니다. People/Settings와 tab host는 default store가 navigation state를 소유합니다. Posts는 하나의 configured store를 명시적으로 소유합니다. 800pt 미만에서는 stack, 넓은 화면에서는 split으로 렌더링하고 `replaceHost`로 descriptor와 state를 함께 전환하며 detail history를 유지합니다. host와 detail scope는 같은 authority를 사용합니다. 모든 leaf coordinator 환경은 tab host의 공통 ancestor에 주입합니다.
 
-- leaf feature를 `Interface / Logic / UI / Router / Testing / Tests`로 나누어 import 경계를 컴파일 단계에서 강제합니다.
-- `AppContainer -> FeatureContainer -> EntireTabContainer` strict hierarchy를 매크로가 생성하는 dependency contract로 검증합니다.
-- `Remote -> Data -> Domain -> LayerContainer` 조립을 root layer가 숨기고 feature에는 concrete stateless use case만 전달합니다.
-- `People -> Settings -> People` 런타임 이동은 상위 `EntireTabCoordinator`가 중재하므로 sibling 간 컴파일 의존 순환이 없습니다.
-- routing state 소유권은 generated router 환경에 있고 coordinator는 business intent와 cross-feature mediation에 집중합니다.
+## InnoDI surfaces
 
-## InnoDI 6.0 Pilot
+| Capability | Sample usage and verification |
+| --- | --- |
+| Role/input/provider macros | App, Layers, Domain/Data/Remote, 모든 feature container. `@DIContainerRole`, `@Input`, typed/factory `@Provide` |
+| Hierarchy and feature root | App → FeatureContainer → EntireTabContainer의 `@SubContainer`; canonical parent `\Self.member`; generated dependency protocol과 root-view helper |
+| On-demand and effect metadata | analytics/network client의 `.onDemand`와 `.sideEffect`; deferred construction을 뜻하며 service shutdown을 대신하지 않습니다 |
+| Overrides and prewarm | `DIAdvancedSurfaceTests`: shared copy cache, typed selective prewarm, optional nil의 `set(_:to:)`, live factory bypass |
+| Async owned lifetime | 같은 tests: `makeOwned`, report의 `isReady`, `retryAndRequireReady`, value override, 반복 `close`, close 뒤 read 실패 |
+| Collection | test fixture `@Multibinding`으로 contributor 순서와 shared/transient provider 합성 |
+| Generated mocks | Domain의 test-only `@GenerateMock` + InnoDITesting. Sendable protocol의 call/stub storage를 generated locking으로 관리. generated shape는 experimental이며 production API로 노출하지 않습니다 |
+| Validation | target macro diagnostics, DAG plugin, exact-release graph CLI, consumer build를 각각 실행 |
 
-- `AppContainer`는 `@DIHierarchyRoot`와 `@DIContainer(root: true, mainActor: true)`를 함께 사용합니다.
-- cross-module child인 `FeatureContainer`와 `EntireTabContainer`는 `@DIComponent`로 strict hierarchy 참여를 명시합니다.
-- `@Provide(...self, with:)`의 type-based factory dependency와 `@SubContainer(bindings:)` edge를 사용합니다.
-- 각 relevant target은 `InnoDIDAGValidationPlugin`을 연결해 declaration/DAG validation을 빌드에 포함합니다.
-- People 상세 화면은 route의 `PeopleUser`를 assisted input으로 받아 child container를 생성합니다. 서로 다른 route 값은 독립된 shared session을 가지며, 같은 child 내부에서는 identity를 유지하고 테스트 override도 적용됩니다.
-- 파일럿은 공개 6.0 surface와 InnoDI code candidate revision `f1a3eaccf19bfc43164de3621c9197c731d92342`에 의도적으로 고정합니다. People detail route는 수동 `@State` container 대신 `DIContainerHost`의 identity·retry 수명 계약을 실제로 사용합니다. RFC 0006 promotion PR의 쿨다운과 유지보수자 승인이 끝나기 전에는 최종 6.0 정식 릴리스로 간주하지 않습니다.
+Async-owned fixture는 명시적인 readiness/retry/close 사용 예입니다. 앱의 동기 구성에는 이를 일괄 적용하지 않습니다. assisted factory, environment bridge, hosted child lifecycle은 현재 앱에 해당하는 runtime 요구가 없어 추가하지 않았습니다.
 
-revision `e1f0d12`에서는 child 선언이 source-visible nested `AssistedFactory`를 소유하고 parent가 `@SubContainerFactory`로 ordinary input을 바인딩합니다. 같은 Xcode target의 다른 source file에서도 actor-isolated generated initializer와 assisted call이 노출되어 기존 `PeopleDetailFactoryPilot` wrapper와 `_spi(Experimental)` import를 제거했습니다. child의 `PeopleFeatureInput`은 parent가 고정하고 `PeopleUser`는 route 호출 시 전달되며, 서로 다른 호출의 `.shared` session 격리와 override 흐름을 테스트합니다.
+## InnoFlow surfaces
 
-제약도 명시적으로 남깁니다. Xcode build-tool plugin fallback은 전체 source declaration과 dependency DAG를 검증하지만, Xcode plugin API가 Tuist의 cross-project target topology를 완전하게 전달하지는 않습니다. 따라서 exact module-edge hierarchy 검증은 topology-aware SwiftPM/CI gate가 최종 증거이며, 로컬 Xcode gate만으로 그 범위를 과장하지 않습니다.
+| Capability | Sample usage and verification |
+| --- | --- |
+| Feature authoring | 모든 production reducer와 clock fixture가 `@InnoFlow` + nested State/Action/body를 사용 |
+| Phase ownership | production reducer는 `phaseManaged: true, strictPhaseTotality: true`; macro가 PhaseMap을 한 번 적용. body는 phase를 직접 변경하지 않음 |
+| Error and cancellation | `.perform(operation:success:failure:)`와 domain별 cancellation ID, cancel-in-flight. throw된 error의 타입과 accepted cancellation을 구분 |
+| Typed outputs | People의 openSettings / Settings의 openPeople는 `Self.output`; dispatch 전에 설치되는 bounded capture를 모델이 소비한 뒤 `finish()` |
+| Persistent navigation intent | 데이터가 아직 없는 외부 detail ID, renderable selection/summary는 state에 보관. sibling event는 typed output으로 전달 |
+| Case paths | Action/Output의 macro-generated paths를 PhaseMap과 exhaustive output assertions에 사용 |
+| Bindable state | Settings의 `@BindableField`. UI는 private Logic Store를 노출하지 않는 model getter/action adapter를 통해 Binding 구성 |
+| Instrumentation | People의 OSLog/signpost는 action payload를 redacted 상태로 기록 |
+| Testing | send/receive/receiveOutput/finish를 exhaustive로 사용. phase는 reducer가 이미 적용하므로 test helper로 다시 적용하지 않음. ManualTestClock은 등록된 sleeper 수를 기다린 후 진행 |
+| Regression | 완료된 초기 load 뒤 refresh 실패 시 onAppear가 effect 없이 loading phase로 바뀌지 않도록 resolver와 guard 검증 |
 
-## InnoFlow 5.1
+Scene callback은 navigation command를 보내며 business effect를 직접 수행하지 않습니다. typed output capture는 replay나 영구 queue가 아닙니다. 모델이 소비한 cross-feature request는 상위 coordinator가 한 번 가져갑니다.
 
-- 모든 leaf reducer는 `@InnoFlow(phaseManaged: true)`와 `PhaseMap`으로 상태 전이를 선언합니다.
-- effect는 `EffectTask.run`과 `cancellable(cancelInFlight:)`로 lifecycle을 드러냅니다.
-- production state surface는 `@BindableField`, `IdentifiedArray`, `StoreInstrumentation`을 사용합니다.
-- reducer tests는 `InnoFlowTesting.TestStore`의 `send`, `receive(through:)`, `finish()`로 effect와 phase transition을 결정적으로 검증합니다.
-- clock 기반 effect test는 `ManualTestClock.advance(by:onceSleepersReach:)`를 사용합니다.
-- `Task.yield`, wall-clock sleep, polling helper는 feature tests에서 사용하지 않습니다.
+## InnoRouter surfaces
 
-## InnoRouter 5.2.1
+| Capability | Sample usage and verification |
+| --- | --- |
+| Routes and destinations | 모든 destination/tab/link enum이 `@Router`; payload route는 Codable |
+| Stack / tab / split | People/Settings는 RouterHost, EntireTab은 RouterTabHost, Posts는 좁은 화면에서 RouterHost, 넓은 화면에서 RouterSplitHost. watchOS 분기는 stack |
+| Throwing setup | tab/split host를 initializer의 Result에서 준비하고 body에서 setup failure를 표시. split closure에는 안정적인 `posts.list`/`posts.detail` declaration ID. compact 초기 column은 sidebar이고 선택은 detail scope의 stack을 바꾼 뒤 root preferredCompactColumn을 detail로 변경 |
+| Stable tabs | `@TabItem(id:)`와 generated SampleTab.Tab을 선택 authority로 사용 |
+| Action/state environment | `@EnvironmentRouter` focused action/dispatch; Settings는 `@EnvironmentRouterState`로 presentation 존재 확인 |
+| Typed presentation | Digest의 `@PresentationResult(Bool.self)` generated request. completion(value), interactive dismissal, caller cancellation, rejection을 구분. failure UI와 acknowledgement action |
+| Deep link | `@DeepLink` + scheme/host allowlist의 generated resolver. unknown path, missing/invalid payload, foreign origin을 거부 |
+| State/draft/budget | 테스트에서 read-only RouterState의 별도 draft를 만들고 bounded build 실패와 원본 보존 검증. Posts는 explicit replaceHost로 compact/split 전환과 동일 store/detail history 보존을 검증 |
+| Snapshot | PeopleRoute payload의 RouterSnapshotCodec round trip을 테스트. 앱 시작 시 디스크 복원 기능은 아직 없음 |
+| Tests | RouterTestStore의 async send, started/committed, state, revision, finish. typed presentation의 caller cancellation과 result 완료도 검증 |
 
-- People/Posts/Settings route enum은 모두 `@Router`가 destination과 store를 생성합니다.
-- People/Settings는 `RouterHost`, Posts는 지원 플랫폼에서 `RouterSplitHost`를 사용합니다.
-- feature view와 route destination은 `@EnvironmentRouter`로 push/sheet/dismiss command를 전송합니다.
-- `SampleTab`은 `@Router` + `@TabItem`, root shell은 `RouterTabHost`를 사용합니다.
-- `SampleDeepLink`는 scheme/host allowlist를 가진 `@Router`와 route별 `@DeepLink`를 사용하고 generated `resolveDeepLink(_:)`로 URL을 해석합니다.
-- route tests는 `InnoRouterTesting.FlowTestStore`로 command, navigation path, modal state, interception을 검증합니다.
+Host-less tests는 native sheet/tab/split 동작을 대신하지 않습니다. 현재 iOS 27.1에서 compact detail을 띄운 채 펼치면 상세는 stack으로 유지되고, root를 다시 드러낸 뒤 wide split으로 전환됩니다. 이 native lifecycle 경계는 UI 검증에서 확인했으며, 상세와 뒤로 가기 이력은 양쪽 전환에서 보존됩니다. deterministic UI test와 screenshot/hierarchy 검증을 별도로 수행합니다. scene/window/immersive driver, UIKit bridge, inspector, policy-deferred auth restoration은 이 sample의 현재 기능이 아닙니다.
 
-`EntireTabCoordinator`는 generated tab router를 직접 소유하지 않습니다. child coordinator의 typed business intent를 소비하고, root bridge가 environment tab router로 실제 탭 선택을 수행합니다.
+## InnoNetwork surfaces
 
-## InnoNetwork 5.0
+| Capability | Sample usage and verification |
+| --- | --- |
+| Endpoint macros | named GET와 test POST는 explicit struct + `@APIDefinition(method:path:auth:)`; 기본 Macros trait 유지 |
+| Auth | anonymous / required 구분, `/todos`에만 token refresh/replay; mock single-flight와 401 replay 검사 |
+| Resilience | bounded retry와 Retry-After clamp, unsafe POST는 idempotency key 없이 retry하지 않는 테스트 |
+| Cache | RFC 9111 policy와 optional persistent cache; 안정적인 metadata header로 GET reuse 검증 |
+| Operation | public OperationNetworkClient handle의 typed JSON value, expired deadline의 pre-transport failure, shutdown의 terminal cancellation |
+| Encoded request | custom binary bytes의 explicit auth/content type, deferred encoder, request/response byte bound; JSON과 동일 operation path |
+| Observability | secureDefault logger와 method/status/numeric code. raw URL, arbitrary error text, action payload를 public log에 남기지 않음 |
+| Testing | MockURLSession / StubNetworkClient public products만 사용. package-internal/SPI clock/transport를 소비하지 않음 |
 
-- 모든 named endpoint는 root product의 default `Macros` trait가 제공하는 `@APIDefinition(method:path:auth:)`으로 conformance, method, path, auth, empty parameter witness를 생성합니다.
-- public endpoint는 `auth: .anonymous`, 인증 endpoint는 `auth: .required`를 선언하고 `RefreshTokenPolicy(appliesTo:)`로 `/todos`만 refresh/replay 대상에 포함합니다.
-- production client는 concrete `URLSession` 경계를 사용하고, test target만 `InnoNetworkTestSupport`를 연결해 `MockURLSession`과 `StubNetworkClient`를 사용합니다.
-- request metadata adapter는 5.0 역할 구분에 맞춰 `AuthPack.additionalRequestInterceptors`로 구성합니다.
-- typed `HTTPHeaderName`, RFC 9111 cache policy, `InnoNetworkPersistentCache`를 app 조립 경로에 적용합니다.
-- `RemotePolicyTests`와 `RemoteTransportTests`가 macro-generated contract, typed stub, retry, decoding, auth single-flight, header, cache 동작을 검증합니다.
+WebSocket/download/upload/OpenAPI/AWS/trust는 필요한 target이 선택하는 optional product입니다. InnoStream과 Protobuf는 별도 package/release입니다. 현재 People/Posts/Todos sample에 별도 서버나 미디어 lifecycle을 붙이지 않았으며 이 기능들의 소비/기기 검증을 완료했다고 주장하지 않습니다. InnoBase도 현재 의존성에 포함되지 않습니다.
 
-## Validation Contract
+## Verification contract
 
-`make verify-ci`는 다음을 한 번에 수행합니다.
+`make verify-ci`와 `make verify`는 같은 전체 gate입니다: install/generate → resolved revision → import boundary → exact-release DI DAG → Domain/Data/Remote/4 leaf feature/Layers/Features/Analytics/App macOS tests → generic iOS app/watch companion → macOS app build.
 
-1. exact remote package resolve 및 fresh Tuist generate
-2. layer import boundary check
-3. InnoDI declaration/DAG validation
-4. Remote tests
-5. People/Posts/Settings/EntireTab leaf feature tests
-6. root Features tests
-7. generic iOS app build
+`make test-ui SIMULATOR_ID=<UDID>`는 별도의 iOS native gate입니다. Debug `--uitesting`에서 generated root override로 fixture repository를 주입하며 실제 feature/reducer/router 구성은 유지합니다.
 
-generated workspace가 InnoDI revision `f1a3eaccf19bfc43164de3621c9197c731d92342`와 나머지 exact release를 resolve하는지도 별도로 확인합니다. 현재 최종 변경 기준으로 Remote 16개와 feature 25개, 총 41개 테스트 및 generic iOS app/embedded watch app build를 포함한 전체 gate가 통과했습니다.
+CLI는 repository의 기존 package/macro trust confirmation skip flags를 사용합니다. macro compiler와 graph validation은 실행됩니다. Xcode UI trust 승인, 실제 device 기능, CI remote 실행, merge/release는 별개의 확인 항목입니다.
 
-## Recommended Next Sequence
+### 2026-10-10 local results
 
-1. InnoDI RFC 0006이 Accepted되면 exact revision pin을 6.0.0 exact tag로 교체
-2. Watch app fixture를 `WatchConnectivity` 또는 App Group storage 기반 동기화로 교체
-3. persistent cache telemetry/statistics를 debug surface에 노출
-4. InnoNetwork request/cache event를 app debug observability surface에 연결
-5. topology-aware hierarchy gate를 InnoSample CI의 명시적 검증 결과로 노출
+- `make verify-ci DERIVED_DATA=/tmp/innosample-latest-surface`: exit 0.
+- exact remote version/revision, SwiftSyntax 604.0.0, import boundary, DI DAG: 통과.
+- 11개 macOS test suite, 총 81개 테스트: 통과.
+- generic iOS 앱 + watchOS companion build, macOS 앱 build: 통과. signing은 비활성 상태이며 배포 검증이 아닙니다.
+- 같은 iOS 27.1 시뮬레이터의 native UI test 3개: 실패 0, 77.405초, exit 0.
+- 별도 native hierarchy/screenshot으로 compact Posts, wide split, 상세 이력 보존, Closed 복귀, Settings 필터 확인.
+- active compact detail에서 펼친 직후에는 stack을 유지하고 root가 다시 드러나면 split으로 전환되는 동작을 확인.
 
-## Conclusion
+| macOS suite | Passed |
+| --- | ---: |
+| Domain | 7 |
+| Data | 8 |
+| Remote | 21 |
+| PeopleFeature | 9 |
+| PostsFeature | 6 |
+| SettingsFeature | 9 |
+| EntireTabFeature | 6 |
+| Layers | 1 |
+| Features | 9 |
+| Analytics | 1 |
+| InnoSampleAppUnitTests | 4 |
 
-현재 구조는 runtime과 testing 양쪽에서 released macro-first surface를 적극 사용하고, InnoDI 6.0 공개 preparation API의 parent-owned assisted factory를 exact revision에 고정해 실제 route flow로 검증합니다. 정식 6.0 전에는 RFC 승인과 exact tag 전환이 남아 있고, 이후 개선은 watch 동기화, cache 관측성, topology-aware CI 증거 강화 같은 운영 hardening 영역입니다.
+검증 증거는 ignored `.codex-artifacts/verify-ci-final.log`, `.codex-artifacts/device/ui-tests-confirmed.log`, `.codex-artifacts/verification-summary.json`에 있습니다. UI는 Debug fixture 경로를 사용합니다. live 서버/TLS, physical device, 원격 CI 실행, PR/merge/release는 이 local 결과에 포함되지 않습니다.

@@ -7,14 +7,9 @@ import PeopleFeatureLogic
 @Observable
 public final class PeopleFeatureCoordinator {
     let model: PeopleFeatureModel
-    let detailFactory: PeopleDetailContainer.AssistedFactory
 
-    init(
-        input: PeopleFeatureInput,
-        detailFactory: PeopleDetailContainer.AssistedFactory
-    ) {
+    init(input: PeopleFeatureInput) {
         self.model = PeopleFeatureModel(loadPeople: input.fetchPeopleUseCase.callAsFunction)
-        self.detailFactory = detailFactory
     }
 
     var selectedUserID: Int? { model.selectedUserID }
@@ -29,8 +24,8 @@ public final class PeopleFeatureCoordinator {
         model.showOverview()
     }
 
-    func openSettings(for request: OpenSettingsRequest) {
-        model.openSettings(forAssigneeID: request.assigneeID)
+    func openSettings(for request: OpenSettingsRequest) async {
+        await model.openSettings(forAssigneeID: request.assigneeID)
     }
 
     public func showDetail(userID: Int) {

@@ -11,7 +11,7 @@ final class FetchPostsUseCaseTests: XCTestCase {
                 authorID: 1
             )
         ]
-        let useCase = FetchPostsUseCase(repository: StubPostRepository(posts: expectedPosts))
+        let useCase = FetchPostsUseCase(repository: makeStubPostRepository(posts: expectedPosts))
 
         let posts = try await useCase()
 
@@ -19,7 +19,7 @@ final class FetchPostsUseCaseTests: XCTestCase {
     }
 
     func testCallAsFunctionPropagatesRepositoryError() async {
-        let useCase = FetchPostsUseCase(repository: StubPostRepository(error: .forced))
+        let useCase = FetchPostsUseCase(repository: makeStubPostRepository(error: .forced))
 
         do {
             _ = try await useCase()

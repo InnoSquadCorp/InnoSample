@@ -20,20 +20,37 @@ public struct SettingsFeatureRouteHost: View {
 private struct SettingsFeatureRoot: View {
     @Environment(SettingsFeatureCoordinator.self) private var coordinator
     @EnvironmentRouter(SettingsRoute.self) private var router
+    @EnvironmentRouterState(SettingsRoute.self) private var routerState
+    @State private var presentationFailed = false
 
     var body: some View {
         SettingsScreen(
             model: coordinator.model,
             onSelect: coordinator.select,
-            onShowDigest: coordinator.showDigest
+            onShowDigest: {
+                guard routerState.presentationFamily == nil else { return }
+                coordinator.showDigest()
+            }
         )
         .onChange(of: coordinator.selectedTodoID, initial: true) { _, _ in
             guard let selectedTodo = coordinator.model.consumeSelectedTodo() else { return }
-            router.send(flow: .replaceStack([.detail(selectedTodo)]))
+            router.dispatch(.replaceStack([.detail(selectedTodo)]))
         }
         .onChange(of: coordinator.pendingDigestToken, initial: false) { _, _ in
             guard let request = coordinator.model.consumeDigestRequest() else { return }
-            router.sheet(.digest(completed: request.completed, total: request.total))
+            Task {
+                let result = await router.present(
+                    SettingsRoute.Presentation.digest(completed: request.completed, total: request.total)
+                )
+                switch result {
+                case .value(true): coordinator.model.acknowledgeDigest()
+                case .value(false), .dismissed, .cancelled: break
+                case .rejected: presentationFailed = true
+                }
+            }
+        }
+        .alert("Summary unavailable", isPresented: $presentationFailed) {
+            Button("OK", role: .cancel) {}
         }
     }
 }

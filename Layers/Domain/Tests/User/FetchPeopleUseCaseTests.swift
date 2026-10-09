@@ -15,7 +15,7 @@ final class FetchPeopleUseCaseTests: XCTestCase {
                 city: "Seoul"
             )
         ]
-        let useCase = FetchPeopleUseCase(repository: StubUserRepository(users: expectedUsers))
+        let useCase = FetchPeopleUseCase(repository: makeStubUserRepository(users: expectedUsers))
 
         let users = try await useCase()
 
@@ -23,7 +23,7 @@ final class FetchPeopleUseCaseTests: XCTestCase {
     }
 
     func testCallAsFunctionPropagatesRepositoryError() async {
-        let useCase = FetchPeopleUseCase(repository: StubUserRepository(error: .forced))
+        let useCase = FetchPeopleUseCase(repository: makeStubUserRepository(error: .forced))
 
         do {
             _ = try await useCase()

@@ -24,8 +24,8 @@ public final class SettingsFeatureCoordinator {
         model.showDigest()
     }
 
-    func openPeople(for request: OpenPeopleRequest) {
-        model.openPeople(userID: request.userID)
+    func openPeople(for request: OpenPeopleRequest) async {
+        await model.openPeople(userID: request.userID)
     }
 
     public func showDetail(assigneeID: Int) {

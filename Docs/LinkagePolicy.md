@@ -1,6 +1,6 @@
 # InnoSample Linkage Policy
 
-기준일: 2026-07-21
+기준일: 2026-10-10
 
 이 문서는 현재 `InnoSample` 모듈과 remote Swift package product의 linkage 기준을 고정합니다.
 
@@ -29,9 +29,10 @@
 
 ## Macro and Plugin Products
 
-- `InnoRouterMacros`는 `.macro` dependency로 연결된 compile-time surface입니다.
+- Router 매크로는 공개 `InnoRouter` umbrella product가 연결합니다. 제거된 5.x `InnoRouterMacros` product를 직접 선언하지 않습니다.
 - `InnoDIDAGValidationPlugin`은 `.plugin` dependency로 연결된 build-tool surface입니다.
-- `InnoFlowTesting`과 `InnoRouterTesting`은 test target에만 직접 연결합니다.
+- `InnoDITesting`, `InnoFlowTesting`, `InnoRouterTesting`, `InnoNetworkTestSupport`는 test target에만 직접 연결합니다.
+- static `Data`를 링크하는 `DataTests`는 generated DI runtime symbol을 해석하도록 `InnoDI` product를 명시적으로 연결합니다.
 
 이 product들은 runtime duplicate-link 문제를 해결하기 위한 dynamic framework 승격 대상이 아닙니다. runtime product와 compile-time/test product를 manifest에서 명시적으로 구분합니다.
 

@@ -6,6 +6,7 @@ import Foundation
 import InnoDI
 import InnoDISwiftUI
 import Layers
+import SwiftUI
 
 @DIContainerRole(role: ContainerRole.root, mainActor: true)
 struct AppContainer {
@@ -16,7 +17,7 @@ struct AppContainer {
 
     // MARK: - Infrastructure
 
-    @Provide(.shared, factory: {
+    @Provide(.shared, initialization: .onDemand, effect: .sideEffect, factory: {
         AnalyticsClient(apiKey: "innosample-demo-key")
     })
     var analyticsClient: AnalyticsClient
@@ -35,7 +36,7 @@ struct AppContainer {
 
     @SubContainer(
         scope: .shared,
-        bindings: [(child: \FeatureContainer.useCases, parent: \AppContainer.featureUseCases)],
+        bindings: [(child: \FeatureContainer.useCases, parent: \Self.featureUseCases)],
         featureRoot: FeatureRootScene.self
     )
     var featureContainer: FeatureContainer

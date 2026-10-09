@@ -1,11 +1,10 @@
-import InnoDISwiftUI
 import InnoRouter
 import PeopleFeatureInterface
 import PeopleFeatureUI
 import SwiftUI
 
 @Router
-enum PeopleRoute {
+enum PeopleRoute: Codable {
     case detail(PeopleUser)
     case overview([PeopleUser])
 
@@ -25,52 +24,9 @@ private struct PeopleDetailDestination: View {
     let user: PeopleUser
 
     var body: some View {
-        PeopleDetailFeature(
-            factory: coordinator.detailFactory,
-            user: user,
-            onOpenSettings: coordinator.openSettings
-        )
-    }
-}
-
-private struct PeopleDetailFeature: View {
-    private let factory: PeopleDetailContainer.AssistedFactory
-    private let user: PeopleUser
-    private let onOpenSettings: (OpenSettingsRequest) -> Void
-
-    init(
-        factory: PeopleDetailContainer.AssistedFactory,
-        user: PeopleUser,
-        onOpenSettings: @escaping (OpenSettingsRequest) -> Void
-    ) {
-        self.factory = factory
-        self.user = user
-        self.onOpenSettings = onOpenSettings
-    }
-
-    var body: some View {
-        DIContainerHost(
-            identity: user,
-            factory: { user in factory(user: user) },
-            content: { container, _ in
-                PeopleDetailScreen(
-                    user: container.session.user,
-                    onOpenSettings: onOpenSettings
-                )
-            },
-            loading: {
-                ProgressView()
-            },
-            failure: { _, lifecycle in
-                ContentUnavailableView {
-                    Label("사용자 화면을 열 수 없습니다", systemImage: "person.crop.circle.badge.exclamationmark")
-                } actions: {
-                    Button("다시 시도") {
-                        lifecycle.retry()
-                    }
-                }
-            }
-        )
+        PeopleDetailScreen(user: user, onOpenSettings: { request in
+            Task { await coordinator.openSettings(for: request) }
+        })
     }
 }
 

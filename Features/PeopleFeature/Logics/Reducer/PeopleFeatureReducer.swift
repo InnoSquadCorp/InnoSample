@@ -3,7 +3,7 @@ import Foundation
 import InnoFlow
 import PeopleFeatureInterface
 
-@InnoFlow(phaseManaged: true)
+@InnoFlow(phaseManaged: true, strictPhaseTotality: true)
 struct PeopleFeatureReducer {
     struct Dependencies: Sendable {
         let loadPeople: @Sendable () async throws -> [UserSummary]
@@ -24,7 +24,6 @@ struct PeopleFeatureReducer {
         var errorMessage: String?
         var selectedUser: UserSummary?
         var pendingOverviewRequest: PeopleOverviewRequest?
-        var pendingSettingsRequest: PeopleSettingsRequest?
         var pendingExternalUserID: Int?
         var activityLog: [String] = []
 
@@ -42,7 +41,10 @@ struct PeopleFeatureReducer {
         case openUserDetail(Int)
         case clearSelection
         case clearOverviewRequest
-        case clearSettingsRequest
+    }
+
+    enum Output: Equatable, Sendable {
+        case openSettings(OpenSettingsRequest)
     }
 
     let dependencies: Dependencies
@@ -50,7 +52,9 @@ struct PeopleFeatureReducer {
     static var phaseMap: PhaseMap<State, Action, State.Phase> {
         PhaseMap(\State.phase) {
             From(.idle) {
-                On(.onAppear, to: .loading)
+                On(.onAppear, targets: [.loading]) { state in
+                    state.isLoading ? .loading : nil
+                }
                 On(.refresh, to: .loading)
             }
             From(.loading) {
@@ -61,7 +65,9 @@ struct PeopleFeatureReducer {
                 On(.refresh, to: .loading)
             }
             From(.failed) {
-                On(.onAppear, to: .loading)
+                On(.onAppear, targets: [.loading]) { state in
+                    state.isLoading ? .loading : nil
+                }
                 On(.refresh, to: .loading)
             }
         }
@@ -71,11 +77,11 @@ struct PeopleFeatureReducer {
         phaseMap.derivedGraph
     }
 
-    var body: some Reducer<State, Action> {
+    var body: some Reducer<State, Action, Output> {
         Reduce { state, action in
             switch action {
             case .onAppear:
-                guard !state.hasLoaded else { return .none }
+                guard !state.hasLoaded && !state.isLoading else { return .none }
                 state.isLoading = true
                 state.errorMessage = nil
                 state.activityLog.append("initial people load")
@@ -118,9 +124,8 @@ struct PeopleFeatureReducer {
                 return .none
 
             case .openSettings(let request):
-                state.pendingSettingsRequest = PeopleSettingsRequest(request: request)
                 state.activityLog.append("cross-feature request to settings for user #\(request.assigneeID)")
-                return .none
+                return Self.output(.openSettings(request))
 
             case .openUserDetail(let userID):
                 if let user = state.people[id: userID] {
@@ -140,26 +145,20 @@ struct PeopleFeatureReducer {
             case .clearOverviewRequest:
                 state.pendingOverviewRequest = nil
                 return .none
-
-            case .clearSettingsRequest:
-                state.pendingSettingsRequest = nil
-                return .none
             }
         }
     }
 
-    private func loadPeople() -> EffectTask<Action> {
+    private func loadPeople() -> ReducerEffect<Action, Output> {
         let loadPeople = dependencies.loadPeople
 
-        return .run { send, _ in
-            do {
-                let people = try await loadPeople()
-                await send(.peopleLoaded(people))
-            } catch {
-                let message = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
-                await send(.peopleFailed(message))
+        return .perform(
+            operation: { try await loadPeople() },
+            success: Action.peopleLoaded,
+            failure: { error in
+                .peopleFailed((error as? LocalizedError)?.errorDescription ?? error.localizedDescription)
             }
-        }
+        )
         .cancellable("people-feature-load", cancelInFlight: true)
     }
 }

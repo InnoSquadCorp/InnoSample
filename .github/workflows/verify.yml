@@ -18,6 +18,11 @@ jobs:
       - name: Install pinned tools
         uses: jdx/mise-action@v4
 
+      - name: Select the reviewed macro toolchain
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '27.1'
+
       - name: Print tool versions
         run: |
           xcodebuild -version

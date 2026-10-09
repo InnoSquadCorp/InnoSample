@@ -4,7 +4,7 @@ import PostsFeatureUI
 import SwiftUI
 
 @Router
-enum PostsRoute {
+enum PostsRoute: Codable {
     case detail(FeaturePost)
     case highlights([FeaturePost])
 

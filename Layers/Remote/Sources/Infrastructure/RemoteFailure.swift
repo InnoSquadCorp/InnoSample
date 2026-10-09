@@ -15,6 +15,8 @@ enum RemoteFailure: Error, Sendable, Equatable {
             switch reason {
             case .invalidRequest(let message), .offline(let message):
                 self = .invalidRequestConfiguration(message)
+            case .invalidPayload:
+                self = .invalidRequestConfiguration("Invalid request payload.")
             case .invalidBaseURL(let string):
                 self = .transport(
                     SendableUnderlyingError(

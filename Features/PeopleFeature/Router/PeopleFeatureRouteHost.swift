@@ -29,7 +29,7 @@ private struct PeopleFeatureRoot: View {
         )
         .onChange(of: coordinator.selectedUserID, initial: true) { _, _ in
             guard let selectedUser = coordinator.model.consumeSelectedUser() else { return }
-            router.send(flow: .replaceStack([.detail(selectedUser)]))
+            router.dispatch(.replaceStack([.detail(selectedUser)]))
         }
         .onChange(of: coordinator.pendingOverviewToken, initial: false) { _, _ in
             guard let users = coordinator.model.consumeOverviewUsers() else { return }

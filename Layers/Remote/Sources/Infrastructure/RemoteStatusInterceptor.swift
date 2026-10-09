@@ -7,8 +7,7 @@ struct RemoteStatusInterceptor: ResponseInterceptor {
 
     func adapt(_ urlResponse: Response, request: URLRequest) async throws -> Response {
         if urlResponse.statusCode == 429 || (500...599).contains(urlResponse.statusCode) {
-            let url = request.url?.absoluteString ?? "unknown"
-            logger.warning("server-side retry candidate for \(url, privacy: .public) status \(urlResponse.statusCode)")
+            logger.warning("server-side retry candidate status \(urlResponse.statusCode)")
         }
         return urlResponse
     }

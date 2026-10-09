@@ -14,12 +14,13 @@ let project = Project.rootFeatures(
         .feature(interface: .settings),
         .layer(.domain),
         .package(.innoDI),
-        .package(.innoDISwiftUI),
         .package(.innoDIDAGValidationPlugin)
     ],
     testDependencies: [
         .layer(.domain),
-        .feature(interface: .entireTab)
+        .feature(interface: .entireTab),
+        .package(.innoDI),
+        .package(.innoDIDAGValidationPlugin)
     ],
     schemes: [
         Project.moduleScheme(

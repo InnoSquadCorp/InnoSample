@@ -23,8 +23,8 @@ public final class PeopleFeatureModel {
         let logger = Logger(subsystem: "com.innosquad.InnoSample", category: "PeopleFeature")
         let signposter = OSSignposter(subsystem: "com.innosquad.InnoSample", category: "PeopleFeature")
         return .combined(
-            .osLog(logger: logger, includeActions: true),
-            .signpost(signposter: signposter, name: "PeopleFeature.run", includeActions: true)
+            .osLog(logger: logger, includeActions: false),
+            .signpost(signposter: signposter, name: "PeopleFeature.run", includeActions: false)
         )
         #else
         return .disabled
@@ -37,14 +37,22 @@ public final class PeopleFeatureModel {
     public var activityLog: [String] { store.activityLog }
     public var selectedUserID: Int? { store.selectedUser?.id }
     public var pendingOverviewToken: UUID? { store.pendingOverviewRequest?.id }
-    public var pendingSettingsRequestID: UUID? { store.pendingSettingsRequest?.id }
+    private var pendingSettingsRequest: PeopleSettingsRequest?
+    public var pendingSettingsRequestID: UUID? { pendingSettingsRequest?.id }
 
     public func loadIfNeeded() { store.send(.onAppear) }
     public func refresh() { store.send(.refresh) }
     public func select(_ user: UserSummary) { store.send(.select(user)) }
     public func showOverview() { store.send(.showOverview) }
-    public func openSettings(forAssigneeID assigneeID: Int) {
-        store.send(.openSettings(.init(assigneeID: assigneeID)))
+    public func openSettings(forAssigneeID assigneeID: Int) async {
+        let dispatch = store.send(.openSettings(.init(assigneeID: assigneeID)), capturingOutputs: .bufferingNewest(1))
+        for await output in dispatch.outputs {
+            switch output {
+            case .openSettings(let request):
+                pendingSettingsRequest = PeopleSettingsRequest(request: request)
+            }
+        }
+        await dispatch.finish()
     }
     public func openUserDetail(userID: Int) {
         store.send(.openUserDetail(userID))
@@ -65,9 +73,9 @@ public final class PeopleFeatureModel {
     }
 
     public func consumeSettingsRequest() -> OpenSettingsRequest? {
-        let request = store.pendingSettingsRequest?.request
+        let request = pendingSettingsRequest?.request
         guard let request else { return nil }
-        store.send(.clearSettingsRequest)
+        pendingSettingsRequest = nil
         return request
     }
 }

@@ -11,7 +11,7 @@ final class FetchTodosUseCaseTests: XCTestCase {
                 assigneeID: 1
             )
         ]
-        let useCase = FetchTodosUseCase(repository: StubTodoRepository(todos: expectedTodos))
+        let useCase = FetchTodosUseCase(repository: makeStubTodoRepository(todos: expectedTodos))
 
         let todos = try await useCase()
 
@@ -19,7 +19,7 @@ final class FetchTodosUseCaseTests: XCTestCase {
     }
 
     func testCallAsFunctionPropagatesRepositoryError() async {
-        let useCase = FetchTodosUseCase(repository: StubTodoRepository(error: .forced))
+        let useCase = FetchTodosUseCase(repository: makeStubTodoRepository(error: .forced))
 
         do {
             _ = try await useCase()

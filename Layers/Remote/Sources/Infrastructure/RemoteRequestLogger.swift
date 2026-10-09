@@ -11,7 +11,7 @@ struct RemoteRequestLogger: NetworkLogger {
     }
 
     func log(request: URLRequest) {
-        diagnosticLogger.debug("request \(request.httpMethod ?? "UNKNOWN", privacy: .public) \(request.url?.absoluteString ?? "-", privacy: .public)")
+        diagnosticLogger.debug("request \(request.httpMethod ?? "UNKNOWN", privacy: .public)")
         baseLogger.log(request: request)
     }
 
@@ -21,7 +21,7 @@ struct RemoteRequestLogger: NetworkLogger {
     }
 
     func log(error: NetworkError) {
-        diagnosticLogger.error("network error \(error.localizedDescription, privacy: .public)")
+        diagnosticLogger.error("network error code=\(error.errorCode)")
         baseLogger.log(error: error)
     }
 }

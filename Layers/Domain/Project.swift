@@ -9,6 +9,7 @@ let project = Project.layer(
         .package(.innoDIDAGValidationPlugin)
     ],
     testBuildableFolders: ["Tests"],
+    testDependencies: [.package(.innoDI), .package(.innoDITesting)],
     schemes: [
         Project.moduleScheme(
             name: "Domain",

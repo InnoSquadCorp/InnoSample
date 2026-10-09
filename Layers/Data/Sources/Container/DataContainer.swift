@@ -1,7 +1,7 @@
 import Domain
 import InnoDI
 
-@DIContainer
+@DIContainerRole(role: ContainerRole.local)
 public struct DataContainer {
     @Input
     public var remoteContainer: any RemoteDataSourceContaining

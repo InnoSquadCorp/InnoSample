@@ -3,12 +3,12 @@ import Foundation
 import InnoDI
 import InnoNetwork
 
-@DIContainer
+@DIContainerRole(role: ContainerRole.local)
 public struct RemoteContainer {
     @Input
     public var baseURL: URL
 
-    @Provide(.shared, factory: { (baseURL: URL) in
+    @Provide(.shared, initialization: .onDemand, effect: .sideEffect, factory: { (baseURL: URL) in
         RemoteClientFactory.makeClient(
             baseURL: baseURL,
             responseCache: RemotePersistentCacheFactory.make()

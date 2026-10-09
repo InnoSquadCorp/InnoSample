@@ -1,6 +1,6 @@
 # InnoSample
 
-이 샘플의 목적은 기능 구현보다 먼저, Inno 계열 앱에서 공통으로 쓸 **모듈 경계, composition 방식, DI wiring, navigation ownership, Tuist helper 정책**을 고정하는 데 있습니다.  
+이 샘플의 목적은 기능 구현보다 먼저, Inno 계열 앱에서 공통으로 쓸 **모듈 경계, composition 방식, DI wiring, navigation ownership, Tuist helper 정책**을 고정하는 데 있습니다.
 즉 이 저장소는 “샘플 앱”이면서 동시에 **개발 시작 전 기본 뼈대(scaffold)** 역할을 합니다.
 
 구조 원칙은 다음 의존 방향으로 정리합니다.
@@ -12,14 +12,13 @@
 - `App -> Layers + Features + ThirdParty`
 
 `InnoDI`, `InnoFlow`, `InnoNetwork`, `InnoRouter`를 쓰는 각 모듈은 독립 `Project.swift`로 관리하고, 루트는 `Workspace.swift`로 조립합니다.  
-Inno 라이브러리 의존성은 로컬 path package가 아니라 각 프로젝트 manifest의 remote package 고정 방식으로 소비합니다. 현재 기준 pin은 InnoDI 6.0 공개 계약 후보 revision `f1a3eaccf19bfc43164de3621c9197c731d92342`, `InnoFlow 5.1.0`, `InnoNetwork 5.0.0`, `InnoRouter 5.2.1`입니다.
+Inno 라이브러리 의존성은 로컬 path package가 아니라 각 프로젝트 manifest의 remote package + exact version 고정 방식으로 소비합니다. 현재 기준 pin은 `InnoDI 7.0.1`, `InnoFlow 6.0.2`, `InnoNetwork 6.1.1`, `InnoRouter 7.0.0`입니다.
 
-기본 개발 환경은 `Xcode 26.4+` 또는 `Xcode 27.x`, Swift language mode `6.3`, `.mise.toml`에 고정한 `Tuist 4.202.5`입니다. InnoNetwork 5.0의 default `Macros` package trait를 Tuist XcodeProj에서 보존하려면 이 버전이 필요합니다.
+기본 개발 환경은 `Xcode 27.1+`, `Swift 6.4`, `.mise.toml`에 고정한 `Tuist 4.202.5`입니다. InnoNetwork 6.1의 default `Macros` package trait를 Tuist XcodeProj에서 보존하려면 이 버전이 필요합니다.
 
 상세 구조 평가와 개선 우선순위는 [Docs/ArchitectureReview.md](Docs/ArchitectureReview.md) 에 정리합니다.
 
 ## Architecture Intent
-
 
 핵심 의도는 세 가지입니다.
 - 개발을 시작하기 전에 레이어 경계와 책임을 먼저 고정한다.
@@ -174,7 +173,7 @@ Tuist helper는 현재 두 단계로 destinations / deployment targets를 나눕
   - `AppContainer`에서 InnoDI graph를 만들고 root `Features` scene에 전달
   - 샘플 analytics wrapper를 통해 앱 시작 이벤트를 기록
 - `App/Sources/AppContainer.swift`
-  - `InnoDI` root container
+  - `@DIContainerRole(role: ContainerRole.root, mainActor: true)` root container
   - base URL 입력으로 `LayerContainer -> FeatureContainer` 순서로 조립
   - `Layers` 내부의 data/domain container를 모르고, 개별 feature wiring 대신 use case를 root `Features`에 전달
   - `AnalyticsClient` concrete 구현을 앱 composition root에서 생성
@@ -184,7 +183,7 @@ Tuist helper는 현재 두 단계로 destinations / deployment targets를 나눕
 ### Layers
 - `Layers`
   - composition-only framework
-  - `LayerContainer`는 plain composition wrapper로 남기고, `RemoteContainer -> DataContainer -> DomainContainer`를 연결한 뒤 feature 입력용 use case만 외부에 노출
+  - `LayerContainer`는 `@DIContainerRole(role: ContainerRole.local)`로 조립하고, `RemoteContainer -> DataContainer -> DomainContainer`를 연결한 뒤 feature 입력용 use case만 외부에 노출
   - `App`과 root `Features`는 내부 조립 단계를 모르고 `LayerContainer.featureUseCases` 같은 feature-facing surface만 사용
   - `SwiftUI`, `InnoFlow`, `InnoRouter`, `InnoNetwork`를 import 하지 않음
   - 현재 제약:
@@ -214,7 +213,7 @@ Tuist helper는 현재 두 단계로 destinations / deployment targets를 나눕
   - raw 응답을 그대로 퍼뜨리지 않고, 필요한 필드만 평탄화/정규화한 DTO를 반환
   - `Data`가 정의한 remote data source contract 구현
   - `RemoteContainer`가 base URL로 InnoNetwork client와 data source를 shared로 제공
-  - `InnoNetwork 5.0.0`의 default `Macros` trait에서 제공하는 `@APIDefinition(method:path:auth:)`로 모든 named endpoint의 method/path/auth와 protocol witness를 생성
+  - `InnoNetwork 6.1.1`의 default `Macros` trait에서 제공하는 `@APIDefinition(method:path:auth:)`로 모든 named endpoint의 method/path/auth와 protocol witness를 생성
   - `FetchTodosRequest`는 `auth: .required`로 인증 경계를 명시하고, `RefreshTokenPolicy(appliesTo:)`로 `/todos`에만 bearer token refresh/replay를 적용
   - app 조립 경로는 `InnoNetworkPersistentCache`와 `CachePack(responseCachePolicy: .rfc9111Compliant(wrapping: .cacheFirst(maxAge: .seconds(300))))`로 GET 응답 cache를 opt-in 구성
   - persistent cache 저장 위치는 user caches 하위 `InnoSample/RemoteHTTPCache`, 한도는 25 MiB / 500 entries
@@ -238,8 +237,8 @@ Tuist helper는 현재 두 단계로 destinations / deployment targets를 나눕
     - 재사용 가능한 공용 컴포넌트만 `SampleDesignSupport`로 승격
   - Router 규칙:
     - coordinator와 route 정의는 `Router`에 두고, navigation/modal host view는 `*RouteHost` suffix 사용
-    - route enum은 `@Router`가 destination과 store를 생성하고, view는 `@EnvironmentRouter`로 navigation command를 전송
-    - People/Settings는 `RouterHost`, list-detail split-view가 핵심인 Posts는 `RouterSplitHost`를 사용하며 watchOS에서는 `RouterHost`로 축소
+    - route enum은 `@Router`가 destination과 typed helper를 생성하고, view는 `@EnvironmentRouter`로 navigation command를 전송
+    - People/Settings는 `RouterHost`, Posts는 800pt 미만에서 `RouterHost`, 넓은 화면에서 `RouterSplitHost`를 사용하며 같은 store의 `replaceHost`로 상세 이력을 유지합니다. watchOS에서는 `RouterHost`로 축소
     - tab shell은 `@Router` + `@TabItem` + `RouterTabHost`, deep link는 scheme/host allowlist를 가진 `@Router` + `@DeepLink`의 generated resolver를 사용
     - coordinator는 business intent와 sibling mediation만 소유하고 navigation store를 수동 보관하지 않음
 - `Features/EntireTabFeature`
@@ -308,7 +307,7 @@ CI와 동일한 최소 gate:
 make verify-ci
 ```
 
-`make verify-ci`는 `tuist install`, `tuist generate --no-open`, layer boundary check, InnoDI graph validation, Remote tests, leaf/root feature tests, iOS app build를 실행합니다. GitHub Actions의 `.github/workflows/verify.yml`도 같은 target을 사용합니다.
+`make verify-ci`는 install/generate, exact version/revision 확인, layer boundary와 DI DAG 검사, 모든 모듈의 macOS 테스트, iOS 앱과 watch companion 빌드, macOS 앱 빌드를 실행합니다. GitHub Actions의 `.github/workflows/verify.yml`도 같은 target을 사용합니다.
 
 로컬에서 더 넓게 확인하려면 아래를 사용합니다.
 
@@ -355,23 +354,28 @@ make verify
 ## Dependency Strategy
 
 - `InnoSample`은 로컬 monorepo path dependency 샘플이 아니라, 릴리즈된 Inno 라이브러리를 소비하는 샘플입니다.
-- Inno 라이브러리 의존성 source of truth는 `Tuist/ProjectDescriptionHelpers/Dependency/TargetDependency+.swift`의 remote package requirement와 각 `Project.swift`의 package 목록입니다.
+- Inno 라이브러리 의존성 source of truth는 `Tuist/ProjectDescriptionHelpers/Dependency/TargetDependency+.swift`의 exact remote package 선언과 각 `Project.swift`의 package 목록입니다.
 - `Tuist/Package.swift`는 per-project package 해석과 중복되지 않도록 dependency 목록을 비워 둡니다.
-- `Package.resolved`는 SwiftPM/Tuist가 생성하는 산출물로만 취급합니다. fresh generate가 선언된 remote requirement를 다시 해석하므로 lockfile을 저장소에 고정하지 않습니다.
+- `Package.resolved`는 SwiftPM/Tuist가 생성하는 산출물로만 취급합니다. fresh generate가 exact requirement를 다시 해석하므로 lockfile을 저장소에 고정하지 않습니다.
 - 따라서 프레임워크를 로컬 수정해 즉시 반영하는 용도보다는, 외부 사용자 관점의 통합 예제로 보는 편이 맞습니다.
-- 공개 배포된 macro surface가 있으면 우선 사용합니다. 단, InnoDI 6.0 assisted-factory 검증은 배포 전 revision을 고정한 명시적 파일럿입니다. `InnoNetwork 5.0.0`은 root product의 default `Macros` trait로 `@APIDefinition`을 제공하므로 별도 codegen package 없이 사용합니다.
+- 공개 배포된 macro surface가 있으면 우선 사용합니다. `InnoNetwork 6.1.1`은 root product의 default `Macros` trait로 `@APIDefinition`을 제공하므로 별도 codegen package 없이 사용합니다.
 
-현재 의존성 표면:
+현재 의존성 표면 (2026-10-10 stable release 및 commit 확인):
 
 | Package | Version | Sample surface |
 | --- | --- | --- |
-| `InnoDI` | `6.0 candidate @ f1a3eac` | 공개 `@Input(.assisted)`·`@AssistedFactory`·`DIContainerHost`, Xcode/Tuist DAG validation plugin |
-| `InnoFlow` | `5.1.0` | `@InnoFlow(phaseManaged: true)`, `PhaseMap`, `EffectTask.cancellable`, `@BindableField`, `StoreInstrumentation`, `TestStore`, `ManualTestClock` |
-| `InnoNetwork` | `5.0.0` | `@APIDefinition(method:path:auth:)`, `NetworkClient.request(_:)`, `RefreshTokenPolicy(appliesTo:)`, `AuthPack`, `CachePack`, `InnoNetworkPersistentCache`, `MockURLSession`, `StubNetworkClient` |
-| `InnoRouter` | `5.2.1` | `@Router`, `@TabItem`, `@DeepLink`, `RouterHost`, `RouterSplitHost`, `RouterTabHost`, `@EnvironmentRouter`, `FlowTestStore` |
+| `InnoDI` | `7.0.1` | `@DIContainerRole`, `@Input`, `@Provide`, `@SubContainer`, generated overrides/prewarm, test-only `@GenerateMock`, owned async preparation/retry/close, `@Multibinding`, DAG plugin |
+| `InnoFlow` | `6.0.2` | strict phase-managed `@InnoFlow`, generated Action/Output case paths, `.perform`, cancellation IDs, typed dispatch outputs, `@BindableField`, redacted instrumentation, exhaustive `TestStore`, `ManualTestClock` |
+| `InnoNetwork` | `6.1.1` | `@APIDefinition`, explicit auth/refresh/retry/cache policy, persistent cache, operation handles/deadlines, bounded encoded requests, public test doubles |
+| `InnoRouter` | `7.0.0` | `@Router`, stable-ID `@TabItem`, `@DeepLink`, `@PresentationResult`, stack/tab/split hosts, action/state environments, Codable snapshot/draft/budget, `RouterTestStore` |
 
-현재 확인된 검증 상태:
-- fresh `tuist generate --no-open`: 통과
-- generated workspace resolution: InnoDI revision `f1a3eaccf19bfc43164de3621c9197c731d92342` 및 나머지 exact version과 일치
-- Remote 16개 + feature 25개, 총 41개 테스트와 generic iOS app/embedded watch app build: 통과
-- 전체 `make verify-ci`: 통과 (2026-09-05, Xcode 27.0, Tuist 4.202.5)
+API별 사용 위치와 테스트/네이티브 검증 범위는 [ArchitectureReview](Docs/ArchitectureReview.md)를 참고합니다.
+`Scripts/check-library-versions.py`는 manifest, 생성된 lockfile의 exact version/revision, DI CLI revision, SwiftSyntax 604.0.0을 함께 확인합니다.
+
+UI 검증은 앱 경계의 generated override에 fixture repository를 주입합니다. Debug `--uitesting` 실행에서만 외부 API 대신 결정적 fixture를 사용하며, 실제 feature/reducer/router/host 조립은 그대로 실행합니다.
+
+```bash
+make test-ui SIMULATOR_ID=<iOS-simulator-UDID>
+```
+
+CLI gate는 기존 `-skipPackagePluginValidation -skipMacroValidation` 신뢰 확인 플래그를 사용합니다. macro expansion과 DI validation은 실제로 실행됩니다. Xcode UI에서의 Trust & Enable 승인 상태는 이 CLI 결과와 별개입니다.

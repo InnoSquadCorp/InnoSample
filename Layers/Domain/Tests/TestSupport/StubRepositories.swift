@@ -1,56 +1,50 @@
 import Domain
+import InnoDI
+import InnoDITesting
 
-enum StubRepositoryError: Error, Sendable {
-    case forced
+enum StubRepositoryError: Error, Sendable { case forced }
+
+@GenerateMock
+protocol UserRepositoryFixture: Sendable {
+    func fetchUsers() async throws -> [UserSummary]
 }
 
-struct StubUserRepository: UserRepositoryProtocol {
-    let users: [UserSummary]
-    let error: StubRepositoryError?
+extension UserRepositoryFixtureMock: UserRepositoryProtocol {}
 
-    init(users: [UserSummary] = [], error: StubRepositoryError? = nil) {
-        self.users = users
-        self.error = error
-    }
-
-    func fetchUsers() async throws -> [UserSummary] {
-        if let error {
-            throw error
-        }
-        return users
-    }
+func makeStubUserRepository(
+    users: [UserSummary] = [], error: StubRepositoryError? = nil
+) -> UserRepositoryFixtureMock {
+    let mock = UserRepositoryFixtureMock()
+    mock.fetchUsersResult = error.map { .failure($0) } ?? .success(users)
+    return mock
 }
 
-struct StubPostRepository: PostRepositoryProtocol {
-    let posts: [PostSummary]
-    let error: StubRepositoryError?
-
-    init(posts: [PostSummary] = [], error: StubRepositoryError? = nil) {
-        self.posts = posts
-        self.error = error
-    }
-
-    func fetchPosts() async throws -> [PostSummary] {
-        if let error {
-            throw error
-        }
-        return posts
-    }
+@GenerateMock
+protocol PostRepositoryFixture: Sendable {
+    func fetchPosts() async throws -> [PostSummary]
 }
 
-struct StubTodoRepository: TodoRepositoryProtocol {
-    let todos: [TodoSummary]
-    let error: StubRepositoryError?
+extension PostRepositoryFixtureMock: PostRepositoryProtocol {}
 
-    init(todos: [TodoSummary] = [], error: StubRepositoryError? = nil) {
-        self.todos = todos
-        self.error = error
-    }
+func makeStubPostRepository(
+    posts: [PostSummary] = [], error: StubRepositoryError? = nil
+) -> PostRepositoryFixtureMock {
+    let mock = PostRepositoryFixtureMock()
+    mock.fetchPostsResult = error.map { .failure($0) } ?? .success(posts)
+    return mock
+}
 
-    func fetchTodos() async throws -> [TodoSummary] {
-        if let error {
-            throw error
-        }
-        return todos
-    }
+@GenerateMock
+protocol TodoRepositoryFixture: Sendable {
+    func fetchTodos() async throws -> [TodoSummary]
+}
+
+extension TodoRepositoryFixtureMock: TodoRepositoryProtocol {}
+
+func makeStubTodoRepository(
+    todos: [TodoSummary] = [], error: StubRepositoryError? = nil
+) -> TodoRepositoryFixtureMock {
+    let mock = TodoRepositoryFixtureMock()
+    mock.fetchTodosResult = error.map { .failure($0) } ?? .success(todos)
+    return mock
 }

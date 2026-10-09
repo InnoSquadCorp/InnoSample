@@ -1,6 +1,6 @@
 import InnoDI
 
-@DIContainer
+@DIContainerRole(role: ContainerRole.local)
 public struct DomainContainer: FeatureUseCaseContaining {
     @Input
     public var dataContainer: any RepositoryContaining

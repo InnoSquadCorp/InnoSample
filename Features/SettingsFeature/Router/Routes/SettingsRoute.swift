@@ -4,8 +4,9 @@ import SettingsFeatureUI
 import SwiftUI
 
 @Router
-enum SettingsRoute {
+enum SettingsRoute: Codable {
     case detail(FeatureTodo)
+    @PresentationResult(Bool.self)
     case digest(completed: Int, total: Int)
 
     var destination: some View {
@@ -24,19 +25,34 @@ private struct SettingsDetailDestination: View {
     let todo: FeatureTodo
 
     var body: some View {
-        SettingsDetailScreen(todo: todo, onOpenPeople: coordinator.openPeople)
+        SettingsDetailScreen(todo: todo, onOpenPeople: { request in
+            Task { await coordinator.openPeople(for: request) }
+        })
     }
 }
 
 private struct SettingsDigestDestination: View {
     @EnvironmentRouter(SettingsRoute.self) private var router
+    @State private var completionFailed = false
 
     let completed: Int
     let total: Int
 
     var body: some View {
         SettingsDigestSheet(completed: completed, total: total) {
-            router.dismiss()
+            Task {
+                do {
+                    try await router.finishPresentation(
+                        SettingsRoute.Presentation.digest(completed: completed, total: total),
+                        returning: true
+                    )
+                } catch {
+                    completionFailed = true
+                }
+            }
+        }
+        .alert("Unable to close summary", isPresented: $completionFailed) {
+            Button("OK", role: .cancel) {}
         }
     }
 }

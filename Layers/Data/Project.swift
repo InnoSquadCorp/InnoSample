@@ -11,7 +11,8 @@ let project = Project.leafLayer(
     ],
     testBuildableFolders: ["Tests"],
     testDependencies: [
-        .layer(.domain)
+        .layer(.domain),
+        .package(.innoDI)
     ],
     schemes: [
         Project.moduleScheme(

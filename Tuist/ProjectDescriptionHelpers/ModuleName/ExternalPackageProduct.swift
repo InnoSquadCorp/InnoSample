@@ -1,6 +1,7 @@
 public enum ExternalPackageProduct: String {
     case innoDI = "InnoDI"
     case innoDIDAGValidationPlugin = "InnoDIDAGValidationPlugin"
+    case innoDITesting = "InnoDITesting"
     case innoDISwiftUI = "InnoDISwiftUI"
     case innoFlow = "InnoFlow"
     case innoFlowTesting = "InnoFlowTesting"
@@ -8,6 +9,5 @@ public enum ExternalPackageProduct: String {
     case innoNetworkPersistentCache = "InnoNetworkPersistentCache"
     case innoNetworkTestSupport = "InnoNetworkTestSupport"
     case innoRouter = "InnoRouter"
-    case innoRouterMacros = "InnoRouterMacros"
     case innoRouterTesting = "InnoRouterTesting"
 }

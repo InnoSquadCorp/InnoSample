@@ -3,9 +3,7 @@ import SwiftUI
 
 @main
 struct InnoSampleApp: App {
-    private let container = AppContainer(
-        baseURL: URL(string: "https://jsonplaceholder.typicode.com")!
-    )
+    private let container = SampleAppContainerFactory.make()
 
     init() {
         let appContainer = container

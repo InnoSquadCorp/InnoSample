@@ -2,7 +2,7 @@ import Domain
 import Foundation
 import InnoFlow
 
-@InnoFlow(phaseManaged: true)
+@InnoFlow(phaseManaged: true, strictPhaseTotality: true)
 struct PostsFeatureReducer {
     struct Dependencies: Sendable {
         let loadPosts: @Sendable () async throws -> [PostSummary]
@@ -44,7 +44,9 @@ struct PostsFeatureReducer {
     static var phaseMap: PhaseMap<State, Action, State.Phase> {
         PhaseMap(\State.phase) {
             From(.idle) {
-                On(.onAppear, to: .loading)
+                On(.onAppear, targets: [.loading]) { state in
+                    state.isLoading ? .loading : nil
+                }
                 On(.refresh, to: .loading)
             }
             From(.loading) {
@@ -55,7 +57,9 @@ struct PostsFeatureReducer {
                 On(.refresh, to: .loading)
             }
             From(.failed) {
-                On(.onAppear, to: .loading)
+                On(.onAppear, targets: [.loading]) { state in
+                    state.isLoading ? .loading : nil
+                }
                 On(.refresh, to: .loading)
             }
         }
@@ -65,11 +69,11 @@ struct PostsFeatureReducer {
         phaseMap.derivedGraph
     }
 
-    var body: some Reducer<State, Action> {
+    var body: some Reducer<State, Action, Never> {
         Reduce { state, action in
             switch action {
             case .onAppear:
-                guard !state.hasLoaded else { return .none }
+                guard !state.hasLoaded && !state.isLoading else { return .none }
                 state.isLoading = true
                 state.errorMessage = nil
                 state.activityLog.append("initial posts load")
@@ -119,15 +123,13 @@ struct PostsFeatureReducer {
     private func loadPosts() -> EffectTask<Action> {
         let loadPosts = dependencies.loadPosts
 
-        return .run { send, _ in
-            do {
-                let posts = try await loadPosts()
-                await send(.postsLoaded(posts))
-            } catch {
-                let message = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
-                await send(.postsFailed(message))
+        return .perform(
+            operation: { try await loadPosts() },
+            success: Action.postsLoaded,
+            failure: { error in
+                .postsFailed((error as? LocalizedError)?.errorDescription ?? error.localizedDescription)
             }
-        }
+        )
         .cancellable("posts-feature-load", cancelInFlight: true)
     }
 }

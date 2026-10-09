@@ -6,13 +6,13 @@ import SwiftUI
 
 @Router
 public enum SampleTab {
-    @TabItem("People", systemImage: "person.2")
+    @TabItem("People", systemImage: "person.2", id: "people")
     case people
 
-    @TabItem("Posts", systemImage: "doc.text")
+    @TabItem("Posts", systemImage: "doc.text", id: "posts")
     case posts
 
-    @TabItem("Settings", systemImage: "gearshape")
+    @TabItem("Settings", systemImage: "gearshape", id: "settings")
     case settings
 
     public var destination: some View {

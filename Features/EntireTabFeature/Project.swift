@@ -13,8 +13,7 @@ let project = Project.compositeFeature(
         router: [
             .package(.innoDI),
             .package(.innoDIDAGValidationPlugin),
-            .package(.innoRouter),
-            .package(.innoRouterMacros)
+            .package(.innoRouter)
         ]
     )
 )

@@ -4,7 +4,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 INNODI_REMOTE_URL="https://github.com/InnoSquadCorp/InnoDI.git"
-INNODI_RELEASE_REVISION="3263926f01ba8e1760e254402d3bd468c477ef5f"
+INNODI_RELEASE_REVISION="ce47cf4b207c3b8810b2a7d7d622a2f8ead3ed96"
 INNODI_ROOT="${INNODI_ROOT:-}"
 TEMP_ROOT=""
 

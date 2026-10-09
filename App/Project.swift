@@ -34,6 +34,11 @@ let project = Project.app(
         .thirdParty(interface: .analytics)
     ],
     schemes: [
+        Project.moduleScheme(
+            name: "InnoSampleAppUnitTests",
+            buildTargets: [.target("InnoSampleApp")],
+            testTargets: [.testableTarget(target: .target("InnoSampleAppTests"))]
+        ),
         Project.appScheme(
             name: "InnoSampleApp",
             testTarget: "InnoSampleAppTests",

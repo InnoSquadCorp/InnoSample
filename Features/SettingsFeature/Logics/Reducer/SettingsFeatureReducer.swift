@@ -3,7 +3,7 @@ import Foundation
 import InnoFlow
 import SettingsFeatureInterface
 
-@InnoFlow(phaseManaged: true)
+@InnoFlow(phaseManaged: true, strictPhaseTotality: true)
 struct SettingsFeatureReducer {
     struct Dependencies: Sendable {
         let loadTodos: @Sendable () async throws -> [TodoSummary]
@@ -24,7 +24,6 @@ struct SettingsFeatureReducer {
         var errorMessage: String?
         var selectedTodo: TodoSummary?
         var pendingDigestRequest: SettingsDigestRequest?
-        var pendingPeopleRequest: SettingsPeopleRequest?
         var pendingExternalAssigneeID: Int?
         var activityLog: [String] = []
         @BindableField var showsCompletedOnly = false
@@ -39,12 +38,16 @@ struct SettingsFeatureReducer {
         case todosFailed(String)
         case select(TodoSummary)
         case showDigest
+        case acknowledgeDigest
         case openPeople(OpenPeopleRequest)
         case openTodoDetailForAssignee(Int)
         case clearSelection
         case clearDigestRequest
-        case clearPeopleRequest
         case setShowsCompletedOnly(Bool)
+    }
+
+    enum Output: Equatable, Sendable {
+        case openPeople(OpenPeopleRequest)
     }
 
     let dependencies: Dependencies
@@ -52,7 +55,9 @@ struct SettingsFeatureReducer {
     static var phaseMap: PhaseMap<State, Action, State.Phase> {
         PhaseMap(\State.phase) {
             From(.idle) {
-                On(.onAppear, to: .loading)
+                On(.onAppear, targets: [.loading]) { state in
+                    state.isLoading ? .loading : nil
+                }
                 On(.refresh, to: .loading)
             }
             From(.loading) {
@@ -63,7 +68,9 @@ struct SettingsFeatureReducer {
                 On(.refresh, to: .loading)
             }
             From(.failed) {
-                On(.onAppear, to: .loading)
+                On(.onAppear, targets: [.loading]) { state in
+                    state.isLoading ? .loading : nil
+                }
                 On(.refresh, to: .loading)
             }
         }
@@ -73,11 +80,11 @@ struct SettingsFeatureReducer {
         phaseMap.derivedGraph
     }
 
-    var body: some Reducer<State, Action> {
+    var body: some Reducer<State, Action, Output> {
         Reduce { state, action in
             switch action {
             case .onAppear:
-                guard !state.hasLoaded else { return .none }
+                guard !state.hasLoaded && !state.isLoading else { return .none }
                 state.isLoading = true
                 state.errorMessage = nil
                 state.activityLog.append("initial settings load")
@@ -123,9 +130,8 @@ struct SettingsFeatureReducer {
                 return .none
 
             case .openPeople(let request):
-                state.pendingPeopleRequest = SettingsPeopleRequest(request: request)
                 state.activityLog.append("cross-feature request to people for user #\(request.userID)")
-                return .none
+                return Self.output(.openPeople(request))
 
             case .openTodoDetailForAssignee(let assigneeID):
                 if let todo = state.todos.first(where: { $0.assigneeID == assigneeID }) {
@@ -142,12 +148,12 @@ struct SettingsFeatureReducer {
                 state.selectedTodo = nil
                 return .none
 
-            case .clearDigestRequest:
-                state.pendingDigestRequest = nil
+            case .acknowledgeDigest:
+                state.activityLog.append("digest acknowledged")
                 return .none
 
-            case .clearPeopleRequest:
-                state.pendingPeopleRequest = nil
+            case .clearDigestRequest:
+                state.pendingDigestRequest = nil
                 return .none
 
             case .setShowsCompletedOnly(let value):
@@ -158,18 +164,16 @@ struct SettingsFeatureReducer {
         }
     }
 
-    private func loadTodos() -> EffectTask<Action> {
+    private func loadTodos() -> ReducerEffect<Action, Output> {
         let loadTodos = dependencies.loadTodos
 
-        return .run { send, _ in
-            do {
-                let todos = try await loadTodos()
-                await send(.todosLoaded(todos))
-            } catch {
-                let message = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
-                await send(.todosFailed(message))
+        return .perform(
+            operation: { try await loadTodos() },
+            success: Action.todosLoaded,
+            failure: { error in
+                .todosFailed((error as? LocalizedError)?.errorDescription ?? error.localizedDescription)
             }
-        }
+        )
         .cancellable("settings-feature-load", cancelInFlight: true)
     }
 }

@@ -4,7 +4,7 @@ import Foundation
 import InnoDI
 import Remote
 
-@DIContainer
+@DIContainerRole(role: ContainerRole.local)
 public struct LayerContainer {
     @Input
     public var baseURL: URL

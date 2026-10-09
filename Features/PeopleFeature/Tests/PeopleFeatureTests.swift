@@ -1,5 +1,7 @@
 @testable import Domain
+import InnoFlow
 import InnoFlowTesting
+import InnoRouter
 import InnoRouterTesting
 import PeopleFeatureInterface
 @testable import PeopleFeatureLogic
@@ -7,7 +9,7 @@ import PeopleFeatureInterface
 import PeopleFeatureTesting
 import Testing
 
-@Suite("People feature")
+@Suite("People feature", .timeLimit(.minutes(1)))
 @MainActor
 struct PeopleFeatureTests {
     @Test("phase-managed load is deterministic")
@@ -19,12 +21,12 @@ struct PeopleFeatureTests {
             )
         )
 
-        await store.send(.onAppear, through: PeopleFeatureReducer.phaseMap) {
+        await store.send(.onAppear) {
             $0.phase = .loading
             $0.isLoading = true
             $0.activityLog = ["initial people load"]
         }
-        await store.receive(.peopleLoaded(users), through: PeopleFeatureReducer.phaseMap) {
+        await store.receive(.peopleLoaded(users)) {
             $0.phase = .loaded
             $0.isLoading = false
             $0.hasLoaded = true
@@ -46,78 +48,43 @@ struct PeopleFeatureTests {
         #expect(coordinator.model.consumeSelectedUser() == nil)
     }
 
-    @Test("assisted detail children isolate shared state per route value")
-    func assistedDetailChildrenOwnIndependentSharedState() {
-        let coordinator = makeCoordinator()
-        let firstUser = PeopleFeatureFixtures.users[0]
-        let secondUser = PeopleUser(
-            id: 2,
-            name: "Ervin Howell",
-            username: "Antonette",
-            email: "ervin@example.com",
-            phone: "010-3333-4444",
-            website: "example.net",
-            company: "InnoSquad",
-            city: "Busan"
-        )
-
-        let first = coordinator.detailFactory(user: firstUser)
-        let second = coordinator.detailFactory(user: secondUser)
-
-        #expect(first.session.user.id == 1)
-        #expect(second.session.user.id == 2)
-        #expect(first.session !== second.session)
-        let firstSession = first.session
-        #expect(firstSession === first.session)
-
-        let replacement = PeopleDetailSession(
-            input: first.input,
-            user: secondUser
-        )
-        let overridden = coordinator.detailFactory(
-            user: firstUser
-        ) { overrides in
-            overrides.session = replacement
-        }
-        #expect(overridden.session === replacement)
-    }
-
     @Test("cross-feature requests are one-shot values")
-    func coordinatorEmitsOneShotSettingsRequest() {
+    func coordinatorEmitsOneShotSettingsRequest() async {
         let coordinator = makeCoordinator()
         let request = OpenSettingsRequest(assigneeID: 1)
 
-        coordinator.openSettings(for: request)
+        await coordinator.openSettings(for: request)
 
         #expect(coordinator.pendingSettingsRequestID != nil)
         #expect(coordinator.consumeSettingsRequest() == request)
         #expect(coordinator.consumeSettingsRequest() == nil)
     }
 
-    @Test("router flow emits stack and modal events without a host")
-    func routerFlowIsDeterministic() {
+    @Test("router transitions commit stack and sheet state exhaustively")
+    func routerFlowIsDeterministic() async {
         let user = PeopleFeatureFixtures.users[0]
-        let navigation = FlowTestStore<PeopleRoute>()
+        let navigation = RouterTestStore<PeopleRoute>()
 
-        navigation.send(.push(.detail(user)))
-        navigation.receiveNavigationChanged { from, to in
-            from.path.isEmpty && to.path == [.detail(user)]
-        }
-        navigation.receivePathChanged { old, new in
-            old.isEmpty && new == [.push(.detail(user))]
-        }
-        navigation.finish()
+        await navigation.send(.push(.detail(user)))
+        navigation.receiveStarted()
+        navigation.receiveCommitted { $0 == .rootStack(path: [.detail(user)]) && $1 == 1 }
+        await navigation.send(.pop(count: 1))
+        navigation.receiveStarted()
+        navigation.receiveCommitted { $0 == .rootStack && $1 == 2 }
+        await navigation.finish()
 
-        let modal = FlowTestStore<PeopleRoute>()
-        modal.send(.presentSheet(.overview([user])))
-        modal.receiveModalPresented { presentation in
-            presentation.route == .overview([user]) && presentation.style == .sheet
+        let modal = RouterTestStore<PeopleRoute>()
+        await modal.send(.present(.init(route: .overview([user]), style: .sheet)))
+        modal.receiveStarted()
+        modal.receiveCommitted { state, revision in
+            guard case .stack(let stack) = state.root else { return false }
+            return stack.presentation?.route == .overview([user])
+                && stack.presentation?.style == .sheet && revision == 1
         }
-        modal.receiveModalCommandIntercepted()
-        modal.receivePathChanged { old, new in
-            old.isEmpty && new == [.sheet(.overview([user]))]
-        }
-        modal.finish()
+        await modal.send(.dismissPresentation)
+        modal.receiveStarted()
+        modal.receiveCommitted { $0 == .rootStack && $1 == 2 }
+        await modal.finish()
     }
 
     @Test("manual clock advances a sleeping effect without polling")
@@ -136,13 +103,58 @@ struct PeopleFeatureTests {
         await store.finish()
     }
 
-    private func makeCoordinator() -> PeopleFeatureCoordinator {
-        let input = PeopleFeatureInput(
-            fetchPeopleUseCase: FetchPeopleUseCase(repository: StubUserRepository())
+    @Test("cross-feature output is captured and asserted separately from state")
+    func typedOutputIsExhaustive() async {
+        let request = OpenSettingsRequest(assigneeID: 1)
+        let store = TestStore(reducer: PeopleFeatureReducer(dependencies: .init(loadPeople: { [] })))
+        await store.send(.openSettings(request)) {
+            $0.activityLog.append("cross-feature request to settings for user #1")
+        }
+        await store.receiveOutput(.openSettings(request))
+        await store.finish()
+    }
+
+    @Test("appearance after a failed refresh does not restart a completed initial load")
+    func appearancePreservesFailedRefreshPhase() async {
+        var initial = PeopleFeatureReducer.State()
+        initial.phase = .failed
+        initial.hasLoaded = true
+        initial.errorMessage = "unavailable"
+        let store = TestStore(
+            reducer: PeopleFeatureReducer(dependencies: .init(loadPeople: { [] })),
+            initialState: initial
         )
-        return PeopleFeatureCoordinator(
-            input: input,
-            detailFactory: PeopleDetailContainer.AssistedFactory(input: input)
+        await store.send(.onAppear)
+        await store.finish()
+    }
+
+    @Test("Codable routes round-trip through the released snapshot codec")
+    func routeSnapshotRoundTrip() async throws {
+        let router = PeopleRoute.makeRouterStore()
+        _ = await router.perform(.push(.detail(PeopleFeatureFixtures.users[0])))
+        let codec = try RouterSnapshotCodec<PeopleRoute>(currentVersion: 1)
+        let data = try await router.snapshot(using: codec)
+        let restored = PeopleRoute.makeRouterStore()
+        _ = try await restored.restore(from: data, using: codec)
+        #expect(restored.state == router.state)
+        #expect(restored.revision == 1)
+    }
+
+    @Test("a bounded plan rejects oversized state without mutating its source")
+    func routeDraftRespectsBudget() throws {
+        let original = RouterState<PeopleRoute>.rootStack
+        var draft = RouterStateDraft(original)
+        draft.root = .stack(path: [.detail(PeopleFeatureFixtures.users[0]), .detail(PeopleFeatureFixtures.users[0])])
+        let budget = RouterResourceBudget(snapshot: try .init(maximumRoutes: 1))
+        #expect(throws: RouterResourceLimitFailure.self) { try draft.build(resourceBudget: budget) }
+        #expect(original == .rootStack)
+    }
+
+    private func makeCoordinator() -> PeopleFeatureCoordinator {
+        PeopleFeatureCoordinator(
+            input: PeopleFeatureInput(
+                fetchPeopleUseCase: FetchPeopleUseCase(repository: StubUserRepository())
+            )
         )
     }
 }
@@ -153,7 +165,8 @@ private struct StubUserRepository: UserRepositoryProtocol {
     }
 }
 
-private struct ClockReducer: Reducer {
+@InnoFlow
+private struct ClockReducer {
     struct State: Equatable, Sendable, DefaultInitializable {
         var isWaiting = false
         var didFinish = false
@@ -166,22 +179,21 @@ private struct ClockReducer: Reducer {
         case finished
     }
 
-    func reduce(into state: inout State, action: Action) -> EffectTask<Action> {
-        switch action {
-        case .start:
-            state.isWaiting = true
-            return .run { send, context in
-                do {
-                    try await context.sleep(for: .seconds(1))
-                } catch {
-                    return
+    var body: some Reducer<State, Action, Never> {
+        Reduce { state, action in
+            switch action {
+            case .start:
+                state.isWaiting = true
+                return .run { send, context in
+                    do { try await context.sleep(for: .seconds(1)) }
+                    catch { return }
+                    await send(.finished)
                 }
-                await send(.finished)
+            case .finished:
+                state.isWaiting = false
+                state.didFinish = true
+                return .none
             }
-        case .finished:
-            state.isWaiting = false
-            state.didFinish = true
-            return .none
         }
     }
 }
