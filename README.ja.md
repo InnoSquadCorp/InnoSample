@@ -144,7 +144,7 @@ Production reducerは `@InnoFlow(phaseManaged: true, strictPhaseTotality: true)`
     }
 ```
 
-Settingsは完了フィルターに `@BindableField` を使い、書き込み可能なobservable modelをUIの `@Bindable` bindingに接続します。Coordinatorはdispatch時に上限付きtyped outputをcaptureし、`for await` で消費してcaptureを終了します。Logicテストはexhaustive TestStore assertion、ManualTestClock、機密情報を伏せたinstrumentationを使います。
+Settingsは完了フィルターに `@BindableField` を使い、書き込み可能なobservable modelをUIの `@Bindable` bindingに接続します。Feature modelはdispatch時に上限付きtyped outputをcaptureし、`for await` で消費してcaptureを終了します。Logicテストはexhaustive TestStore assertion、ManualTestClock、機密情報を伏せたinstrumentationを使います。
 
 ### InnoNetwork：endpointとポリシー
 

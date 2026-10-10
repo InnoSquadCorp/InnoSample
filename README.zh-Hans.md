@@ -144,7 +144,7 @@ public struct PeopleFeatureContainer {
     }
 ```
 
-Settings 用 `@BindableField` 实现已完成过滤器，用可写 observable model 连接 UI 的 `@Bindable` binding。Coordinator 在 dispatch 时捕获有界类型化 output，通过 `for await` 消费并结束 capture。Logic 测试使用完整 TestStore assertion、ManualTestClock 和隐藏敏感信息的 instrumentation。
+Settings 用 `@BindableField` 实现已完成过滤器，用可写 observable model 连接 UI 的 `@Bindable` binding。Feature model 在 dispatch 时捕获有界类型化 output，通过 `for await` 消费并结束 capture。Logic 测试使用完整 TestStore assertion、ManualTestClock 和隐藏敏感信息的 instrumentation。
 
 ### InnoNetwork：endpoint 与策略
 

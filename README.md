@@ -144,7 +144,7 @@ Production reducers use `@InnoFlow(phaseManaged: true, strictPhaseTotality: true
     }
 ```
 
-Settings uses `@BindableField` for the completed filter and a writable observable model for UI `@Bindable` bindings. Coordinators capture bounded typed outputs at dispatch, consume them with `for await` and finish the capture. Logic tests use exhaustive TestStore assertions, ManualTestClock and redacted instrumentation.
+Settings uses `@BindableField` for the completed filter and a writable observable model for UI `@Bindable` bindings. Feature models capture bounded typed outputs at dispatch, consume them with `for await` and finish the capture. Logic tests use exhaustive TestStore assertions, ManualTestClock and redacted instrumentation.
 
 ### InnoNetwork: endpoints and policy
 

@@ -144,7 +144,7 @@ Los reducers de producción usan `@InnoFlow(phaseManaged: true, strictPhaseTotal
     }
 ```
 
-Settings usa `@BindableField` para el filtro de completados y un modelo observable modificable para bindings UI con `@Bindable`. Los coordinadores capturan salidas tipadas acotadas al despachar, las consumen con `for await` y finalizan la captura. Las pruebas de Logic usan aserciones exhaustivas de TestStore, ManualTestClock e instrumentación con información sensible ocultada.
+Settings usa `@BindableField` para el filtro de completados y un modelo observable modificable para bindings UI con `@Bindable`. Los modelos de las funciones capturan salidas tipadas acotadas al despachar, las consumen con `for await` y finalizan la captura. Las pruebas de Logic usan aserciones exhaustivas de TestStore, ManualTestClock e instrumentación con información sensible ocultada.
 
 ### InnoNetwork: endpoints y políticas
 

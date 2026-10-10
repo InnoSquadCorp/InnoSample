@@ -144,7 +144,7 @@ Production reducers используют `@InnoFlow(phaseManaged: true, strictPh
     }
 ```
 
-Settings использует `@BindableField` для фильтра завершённых и изменяемую observable model для UI bindings с `@Bindable`. Coordinators захватывают ограниченные типизированные outputs при dispatch, читают их через `for await` и завершают capture. Тесты Logic используют исчерпывающие assertions TestStore, ManualTestClock и instrumentation со скрытием чувствительных данных.
+Settings использует `@BindableField` для фильтра завершённых и изменяемую observable model для UI bindings с `@Bindable`. Модели функций захватывают ограниченные типизированные outputs при dispatch, читают их через `for await` и завершают capture. Тесты Logic используют исчерпывающие assertions TestStore, ManualTestClock и instrumentation со скрытием чувствительных данных.
 
 ### InnoNetwork: endpoints и политики
 
