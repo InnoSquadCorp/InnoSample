@@ -3,13 +3,17 @@ import UIKit
 
 @MainActor
 final class InnoSampleAppUITests: XCTestCase {
-    override func setUpWithError() throws {
+    @MainActor
+    override func setUp() async throws {
+        try await super.setUp()
         continueAfterFailure = false
         XCUIDevice.shared.orientation = .portrait
     }
 
-    override func tearDownWithError() throws {
+    @MainActor
+    override func tearDown() async throws {
         XCUIDevice.shared.orientation = .portrait
+        try await super.tearDown()
     }
 
     func testAppLaunchesAndSupportsCoreFlows() {
