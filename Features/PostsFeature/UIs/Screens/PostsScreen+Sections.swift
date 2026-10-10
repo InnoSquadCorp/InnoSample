@@ -95,6 +95,8 @@ extension PostsScreen {
                             .foregroundStyle(.tertiary)
                     }
                     .padding(.vertical, 6)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
                 }
                 .accessibilityIdentifier("posts-row-\(post.id)")
                 .buttonStyle(.plain)

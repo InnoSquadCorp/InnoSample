@@ -7,6 +7,7 @@ import SettingsFeatureRouter
 @MainActor
 @Observable
 public final class EntireTabCoordinator {
+    var selectedTab: SampleTab.Tab = .people
     let peopleCoordinator: PeopleFeatureCoordinator
     let postsCoordinator: PostsFeatureCoordinator
     let settingsCoordinator: SettingsFeatureCoordinator
@@ -25,6 +26,10 @@ public final class EntireTabCoordinator {
         guard let request = peopleCoordinator.consumeSettingsRequest() else { return nil }
         settingsCoordinator.showDetail(assigneeID: request.assigneeID)
         return .settings
+    }
+
+    func updateLayout(isWide: Bool) async {
+        await postsCoordinator.updateLayout(isWide: isWide)
     }
 
     func consumeCrossFeatureNavigationFromSettings() -> SampleTab.Tab? {

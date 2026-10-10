@@ -12,12 +12,15 @@ final class PostsSplitNavigation {
     let layout: RouterTwoColumnSplitLayout
     let store: RouterStore<PostsRoute>
     private(set) var mode: Mode
+    private var requestedMode: Mode
+    private var isAdapting = false
     private let logger = Logger(subsystem: "com.innosquad.InnoSample", category: "PostsNavigation")
 
     init(mode: Mode = .split) throws {
         self.mode = mode
-        layout = try RouterTwoColumnSplitLayout(preferredCompactColumn: .sidebar)
-        let initial = try Self.state(mode: mode, path: [], layout: layout)
+        requestedMode = mode
+        layout = try RouterTwoColumnSplitLayout(visibility: .all, preferredCompactColumn: .sidebar)
+        let initial = try Self.state(mode: mode, stack: .init(), layout: layout)
         store = try PostsRoute.makeRouterStore(
             initialState: initial,
             configuration: .init(hostDescriptor: Self.descriptor(mode: mode, layout: layout))
@@ -25,25 +28,51 @@ final class PostsSplitNavigation {
     }
 
     func adapt(to target: Mode) async {
-        guard mode != target else { return }
-        let path = mode == .compact ? RouterScopePath.root : .root.appending(layout.detailScopeID)
-        guard case .stack(let stack) = store.state.node(at: path) else {
-            logger.error("host adaptation found an incompatible detail scope")
-            return
-        }
-        do {
-            let state = try Self.state(mode: target, path: stack.path, layout: layout, budget: store.resourceBudget)
-            let outcome = await store.replaceHost(
-                with: .init(state: state), descriptor: Self.descriptor(mode: target, layout: layout)
-            )
-            switch outcome {
-            case .applied, .unchanged:
-                mode = target
-            default:
-                logger.error("host adaptation did not commit")
+        requestedMode = target
+        await resumeAdaptationIfPossible()
+    }
+
+    func resumeAdaptationIfPossible() async {
+        guard !isAdapting else { return }
+        isAdapting = true
+        defer { isAdapting = false }
+        while mode != requestedMode {
+            // replaceHost retires every presentation handle. Retain the native
+            // sheet and its authority until it closes, then apply the latest width.
+            guard !hasActivePresentation else { return }
+            let target = requestedMode
+            let path = mode == .compact ? RouterScopePath.root : .root.appending(layout.detailScopeID)
+            guard case .stack(let stack) = store.state.node(at: path) else {
+                logger.error("host adaptation found an incompatible detail scope")
+                return
             }
-        } catch {
-            logger.error("host adaptation failed validation")
+            do {
+                let state = try Self.state(mode: target, stack: stack, layout: layout, budget: store.resourceBudget)
+                let outcome = await store.replaceHost(
+                    with: .init(state: state), descriptor: Self.descriptor(mode: target, layout: layout)
+                )
+                switch outcome {
+                case .applied, .unchanged:
+                    mode = target
+                    logger.info("Posts layout committed: \(String(describing: target), privacy: .public)")
+                default:
+                    logger.error("host adaptation did not commit")
+                    return
+                }
+            } catch {
+                logger.error("host adaptation failed validation")
+                return
+            }
+        }
+    }
+
+    private var hasActivePresentation: Bool {
+        let paths: [RouterScopePath] = mode == .compact ? [.root] : [
+            .root.appending(layout.sidebarScopeID), .root.appending(layout.detailScopeID)
+        ]
+        return paths.contains { path in
+            guard case .stack(let stack) = store.state.node(at: path) else { return false }
+            return stack.presentationFamily != nil
         }
     }
 
@@ -75,16 +104,19 @@ final class PostsSplitNavigation {
     }
 
     private static func state(
-        mode: Mode, path: [PostsRoute], layout: RouterTwoColumnSplitLayout,
+        mode: Mode, stack: RouterStackState<PostsRoute>, layout: RouterTwoColumnSplitLayout,
         budget: RouterResourceBudget = .provisional
     ) throws -> RouterState<PostsRoute> {
         if mode == .compact {
-            return try RouterStateDraft(root: .stack(path: path)).build(resourceBudget: budget)
+            return try RouterStateDraft(root: .stack(stack)).build(resourceBudget: budget)
         }
-        let split = try RouterSplitState(preferredCompactColumn: path.isEmpty ? .sidebar : .detail)
+        let split = try RouterSplitState(
+            visibility: layout.visibility,
+            preferredCompactColumn: stack.path.isEmpty ? .sidebar : .detail
+        )
         let container = try RouterContainerState<PostsRoute>(
             style: .split, selection: layout.detailScopeID,
-            branches: [.init(id: layout.sidebarScopeID), .init(id: layout.detailScopeID, node: .stack(path: path))],
+            branches: [.init(id: layout.sidebarScopeID), .init(id: layout.detailScopeID, node: .stack(stack))],
             split: split
         )
         return try RouterStateDraft(root: .container(container)).build(resourceBudget: budget)

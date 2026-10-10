@@ -4,7 +4,6 @@ import Domain
 import Features
 import Foundation
 import InnoDI
-import InnoDISwiftUI
 import Layers
 import SwiftUI
 

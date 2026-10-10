@@ -5,30 +5,30 @@ import SwiftUI
 
 public struct PostsFeatureRouteHost: View {
     let coordinator: PostsFeatureCoordinator
-#if !os(watchOS)
-    @State private var setup: Result<PostsSplitNavigation, Error>
-#endif
 
     public init(coordinator: PostsFeatureCoordinator) {
         self.coordinator = coordinator
-#if !os(watchOS)
-        _setup = State(initialValue: Result { try PostsSplitNavigation(mode: .compact) })
-#endif
     }
 
     public var body: some View {
-        GeometryReader { geometry in
-            host
-                .task(id: geometry.size.width >= 800) {
+        host
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
 #if !os(watchOS)
-                    if case .success(let navigation) = setup {
-                        await navigation.adapt(to: geometry.size.width >= 800 ? .split : .compact)
-                    }
-#endif
+            .onChange(of: navigationRevision, initial: true) { _, _ in
+                if case .success(let navigation) = coordinator.navigationSetup {
+                    Task { await navigation.resumeAdaptationIfPossible() }
                 }
-        }
-        .environment(coordinator)
+            }
+#endif
+            .environment(coordinator)
     }
+
+#if !os(watchOS)
+    private var navigationRevision: UInt64? {
+        guard case .success(let navigation) = coordinator.navigationSetup else { return nil }
+        return navigation.store.revision
+    }
+#endif
 
     @ViewBuilder
     private var host: some View {
@@ -37,7 +37,7 @@ public struct PostsFeatureRouteHost: View {
             PostsFeatureRoot()
         }
 #else
-        switch setup {
+        switch coordinator.navigationSetup {
         case .success(let navigation):
             if navigation.mode == .compact {
                 RouterHost(store: navigation.store, rootDeclarationID: "posts.list") {

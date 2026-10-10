@@ -9,7 +9,8 @@ on:
 jobs:
   verify:
     name: Verify InnoSample
-    runs-on: macos-latest
+    runs-on: xcode-27
+    timeout-minutes: 60
 
     steps:
       - name: Checkout
@@ -30,4 +31,15 @@ jobs:
           tuist version
 
       - name: Run CI gate
+        env:
+          UI_TEST_RUNTIME_VERSION: '27.0'
+          UI_TEST_RESULT_BUNDLE: ${{ runner.temp }}/InnoSampleUI.xcresult
         run: make verify-ci
+
+      - name: Preserve native UI results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: InnoSample-native-UI
+          path: ${{ runner.temp }}/InnoSampleUI.xcresult
+          if-no-files-found: ignore

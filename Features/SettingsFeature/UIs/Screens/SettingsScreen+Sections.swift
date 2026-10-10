@@ -77,13 +77,11 @@ extension SettingsScreen {
     }
 
     var preferencesQueueSection: some View {
-        Section("Preferences Queue") {
+        @Bindable var model = self.model
+        return Section("Preferences Queue") {
             Toggle(
                 "Show completed only",
-                isOn: Binding(
-                    get: { model.showsCompletedOnly },
-                    set: { model.setShowsCompletedOnly($0) }
-                )
+                isOn: $model.showsCompletedOnly
             )
             .accessibilityIdentifier("settings-shows-completed-only")
 
@@ -108,6 +106,7 @@ extension SettingsScreen {
                         )
                     }
                     .padding(.vertical, 6)
+                    .contentShape(Rectangle())
                 }
                 .accessibilityIdentifier("settings-row-\(todo.id)")
                 .buttonStyle(.plain)

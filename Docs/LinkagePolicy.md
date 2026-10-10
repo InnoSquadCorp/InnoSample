@@ -33,6 +33,7 @@
 - `InnoDIDAGValidationPlugin`은 `.plugin` dependency로 연결된 build-tool surface입니다.
 - `InnoDITesting`, `InnoFlowTesting`, `InnoRouterTesting`, `InnoNetworkTestSupport`는 test target에만 직접 연결합니다.
 - static `Data`를 링크하는 `DataTests`는 generated DI runtime symbol을 해석하도록 `InnoDI` product를 명시적으로 연결합니다.
+- App의 plain `@SubContainer(featureRoot:)` helper는 `InnoDI`를 직접 소비합니다. `hosted: true`를 쓰지 않으므로 `InnoDISwiftUI`는 연결하지 않습니다. 사용하지 않는 그 product를 추가하면 Xcode가 App에 `InnoDI.o`를 정적으로 넣는 동시에 공유 framework에도 DI runtime을 연결해 같은 클래스를 두 번 로드할 수 있습니다.
 
 이 product들은 runtime duplicate-link 문제를 해결하기 위한 dynamic framework 승격 대상이 아닙니다. runtime product와 compile-time/test product를 manifest에서 명시적으로 구분합니다.
 

@@ -24,7 +24,10 @@ public final class SettingsFeatureModel {
     public var pendingDigestToken: UUID? { store.pendingDigestRequest?.id }
     private var pendingPeopleRequest: SettingsPeopleRequest?
     public var pendingPeopleRequestID: UUID? { pendingPeopleRequest?.id }
-    public var showsCompletedOnly: Bool { store.showsCompletedOnly }
+    public var showsCompletedOnly: Bool {
+        get { store.showsCompletedOnly }
+        set { setShowsCompletedOnly(newValue) }
+    }
 
     public func loadIfNeeded() { store.send(.onAppear) }
     public func setShowsCompletedOnly(_ value: Bool) {

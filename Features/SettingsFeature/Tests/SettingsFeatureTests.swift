@@ -167,6 +167,21 @@ struct SettingsFeatureTests {
         #expect(router.presentationHandle() == nil)
     }
 
+    @Test("interactive dismissal returns dismissal rather than acknowledgement")
+    func digestDismissalIsDistinct() async {
+        let router = SettingsRoute.makeRouterStore()
+        let request = SettingsRoute.Presentation.digest(completed: 1, total: 2)
+        var events = router.events.makeAsyncIterator()
+        let pending = Task { await router.present(request) }
+        defer { pending.cancel() }
+        while let event = await events.next() {
+            if case .committed = event { break }
+        }
+        _ = await router.perform(.dismissPresentation)
+        #expect(await pending.value == .dismissed)
+        #expect(router.state == .rootStack)
+    }
+
     private func makeCoordinator() -> SettingsFeatureCoordinator {
         SettingsFeatureCoordinator(
             input: SettingsFeatureInput(

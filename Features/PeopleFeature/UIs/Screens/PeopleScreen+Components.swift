@@ -23,5 +23,6 @@ struct PeopleRow: View {
                 .foregroundStyle(.secondary)
         }
         .padding(.vertical, 6)
+        .contentShape(Rectangle())
     }
 }

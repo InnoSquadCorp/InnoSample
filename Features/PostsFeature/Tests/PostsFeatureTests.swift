@@ -128,6 +128,78 @@ struct PostsFeatureTests {
         #expect(navigation.store.state == .rootStack(path: [.detail(post)]))
     }
 
+    @Test("an active Highlights sheet retains its state and captured authority across width changes", arguments: [false, true])
+    func activePresentationDefersHostReplacement(startsSplit: Bool) async throws {
+        let originalMode: PostsSplitNavigation.Mode = startsSplit ? .split : .compact
+        let targetMode: PostsSplitNavigation.Mode = startsSplit ? .compact : .split
+        let navigation = try PostsSplitNavigation(mode: originalMode)
+        let post = PostsFeatureFixtures.posts[0]
+        await navigation.showDetail(post)
+        let scope: RouterScopePath = startsSplit ? .root.appending(navigation.layout.sidebarScopeID) : .root
+        _ = await navigation.store.perform(.present(.init(route: .highlights([post]), style: .sheet)).inScope(scope))
+        let handle = try #require(navigation.store.presentationHandle(at: scope))
+        let state = navigation.store.state
+        let revision = navigation.store.revision
+
+        await navigation.adapt(to: targetMode)
+
+        #expect(navigation.mode == originalMode)
+        #expect(navigation.store.state == state)
+        #expect(navigation.store.revision == revision)
+        #expect(navigation.store.presentationHandle(at: scope) == handle)
+        let dismissal = await navigation.store.dismissPresentation(using: handle)
+        guard case .applied = dismissal else {
+            Issue.record("The original sheet authority must still be able to dismiss"); return
+        }
+        await navigation.resumeAdaptationIfPossible()
+        #expect(navigation.mode == targetMode)
+        let detail: RouterScopePath = startsSplit ? .root : .root.appending(navigation.layout.detailScopeID)
+        #expect(navigation.store.state.node(at: detail) == .stack(path: [.detail(post)]))
+    }
+
+    @Test("the shared coordinator retains navigation authority when its host is recreated")
+    func coordinatorOwnsNavigationAcrossLayoutChanges() async throws {
+        let coordinator = makeCoordinator()
+        let navigation = try coordinator.navigationSetup.get()
+        let store = navigation.store
+        let post = PostsFeatureFixtures.posts[0]
+        await navigation.showDetail(post)
+        await coordinator.updateLayout(isWide: true)
+        let rebuiltHostNavigation = try coordinator.navigationSetup.get()
+        #expect(rebuiltHostNavigation === navigation)
+        #expect(rebuiltHostNavigation.store === store)
+        #expect(navigation.mode == .split)
+        await coordinator.updateLayout(isWide: false)
+        #expect(store.state == .rootStack(path: [.detail(post)]))
+    }
+
+    @Test("returning to the original width cancels a deferred layout change")
+    func newestWidthWinsWhilePresented() async throws {
+        let navigation = try PostsSplitNavigation(mode: .compact)
+        _ = await navigation.store.perform(.present(.init(route: .highlights([]), style: .sheet)))
+        let handle = try #require(navigation.store.presentationHandle())
+        await navigation.adapt(to: .split)
+        await navigation.adapt(to: .compact)
+        _ = await navigation.store.dismissPresentation(using: handle)
+        let revision = navigation.store.revision
+        await navigation.resumeAdaptationIfPossible()
+        #expect(navigation.mode == .compact)
+        #expect(navigation.store.revision == revision)
+    }
+
+    @Test("a modal in the split detail scope also blocks host replacement")
+    func detailPresentationDefersHostReplacement() async throws {
+        let navigation = try PostsSplitNavigation()
+        let detail = RouterScopePath.root.appending(navigation.layout.detailScopeID)
+        _ = await navigation.store.perform(.present(.init(route: .highlights([]), style: .sheet)).inScope(detail))
+        let handle = try #require(navigation.store.presentationHandle(at: detail))
+        let state = navigation.store.state
+        await navigation.adapt(to: .compact)
+        #expect(navigation.mode == .split)
+        #expect(navigation.store.state == state)
+        #expect(navigation.store.presentationHandle(at: detail) == handle)
+    }
+
     private func makeCoordinator() -> PostsFeatureCoordinator {
         PostsFeatureCoordinator(
             input: PostsFeatureInput(

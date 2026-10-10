@@ -56,7 +56,6 @@ private struct SettingsTabDestination: View {
 
 private struct SampleTabRoutingBridge: ViewModifier {
     @Environment(EntireTabCoordinator.self) private var coordinator
-    @EnvironmentRouter(SampleTab.self) private var tabRouter
 
     func body(content: Content) -> some View {
         content
@@ -67,7 +66,7 @@ private struct SampleTabRoutingBridge: ViewModifier {
                 guard let tab = coordinator.consumeCrossFeatureNavigationFromPeople() else {
                     return
                 }
-                tabRouter.select(tab)
+                coordinator.selectedTab = tab
             }
             .onChange(
                 of: coordinator.settingsCoordinator.pendingPeopleRequestID,
@@ -76,11 +75,11 @@ private struct SampleTabRoutingBridge: ViewModifier {
                 guard let tab = coordinator.consumeCrossFeatureNavigationFromSettings() else {
                     return
                 }
-                tabRouter.select(tab)
+                coordinator.selectedTab = tab
             }
             .onOpenURL { url in
                 guard let tab = coordinator.handleDeepLink(url) else { return }
-                tabRouter.select(tab)
+                coordinator.selectedTab = tab
             }
     }
 }

@@ -24,7 +24,7 @@ let project = Project.app(
         .layers,
         .thirdParty(.analytics),
         .thirdParty(interface: .analytics),
-        .package(.innoDISwiftUI),
+        .package(.innoDI),
         .package(.innoDIDAGValidationPlugin)
     ],
     testDependencies: [

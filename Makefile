@@ -23,7 +23,7 @@ help:
 	@echo "  make test-features        # Run root Features tests"
 	@echo "  make test-app             # Run InnoSampleApp macOS tests"
 	@echo "  make test-analytics       # Run the Analytics wrapper tests"
-	@echo "  make test-ui SIMULATOR_ID=<UDID> # Run deterministic iOS UI scenarios"
+	@echo "  make test-ui              # Run native UI regressions on a dedicated iPad mini"
 	@echo "  make build-app            # Build InnoSampleApp for iOS"
 	@echo "  make verify-ci            # Run the CI gate used by pull requests"
 	@echo "  make verify               # Run the full local gate"
@@ -74,8 +74,7 @@ test-analytics:
 	cd "$(ROOT)" && xcodebuild $(PACKAGE_VALIDATION_FLAGS) -workspace "$(WORKSPACE)" -scheme Analytics -destination 'platform=macOS' -derivedDataPath "$(DERIVED_DATA)" test
 
 test-ui:
-	@test -n "$(SIMULATOR_ID)" || (echo "Set SIMULATOR_ID to an available iOS simulator UDID" && exit 1)
-	cd "$(ROOT)" && xcodebuild $(PACKAGE_VALIDATION_FLAGS) -workspace "$(WORKSPACE)" -scheme InnoSampleApp -destination 'platform=iOS Simulator,id=$(SIMULATOR_ID)' -derivedDataPath "$(DERIVED_DATA)" -only-testing:InnoSampleAppUITests test
+	cd "$(ROOT)" && SIMULATOR_ID="$(SIMULATOR_ID)" DERIVED_DATA="$(DERIVED_DATA)" ./Scripts/run-ui-tests.sh
 
 build-app:
 	cd "$(ROOT)" && xcodebuild $(PACKAGE_VALIDATION_FLAGS) -workspace "$(WORKSPACE)" -scheme InnoSampleApp -destination 'generic/platform=iOS' -derivedDataPath "$(DERIVED_DATA)" build
@@ -84,5 +83,6 @@ build-macos:
 	cd "$(ROOT)" && xcodebuild $(PACKAGE_VALIDATION_FLAGS) -workspace "$(WORKSPACE)" -scheme InnoSampleApp -destination 'platform=macOS' -derivedDataPath "$(DERIVED_DATA)" build
 
 verify-ci: verify
+	$(MAKE) test-ui DERIVED_DATA="$(DERIVED_DATA)"
 
 verify: install-dependencies generate verify-versions verify-boundaries verify-di test-domain test-data test-remote test-leaf-features test-layers test-features test-analytics test-app build-app build-macos

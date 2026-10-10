@@ -16,7 +16,7 @@ Inno 라이브러리 의존성은 로컬 path package가 아니라 각 프로젝
 
 기본 개발 환경은 `Xcode 27.1+`, `Swift 6.4`, `.mise.toml`에 고정한 `Tuist 4.202.5`입니다. InnoNetwork 6.1의 default `Macros` package trait를 Tuist XcodeProj에서 보존하려면 이 버전이 필요합니다.
 
-상세 구조 평가와 개선 우선순위는 [Docs/ArchitectureReview.md](Docs/ArchitectureReview.md) 에 정리합니다.
+상세 구조 평가와 개선 우선순위는 [Docs/ArchitectureReview.md](Docs/ArchitectureReview.md)에 정리합니다.
 
 ## Architecture Intent
 
@@ -239,11 +239,11 @@ Tuist helper는 현재 두 단계로 destinations / deployment targets를 나눕
     - coordinator와 route 정의는 `Router`에 두고, navigation/modal host view는 `*RouteHost` suffix 사용
     - route enum은 `@Router`가 destination과 typed helper를 생성하고, view는 `@EnvironmentRouter`로 navigation command를 전송
     - People/Settings는 `RouterHost`, Posts는 800pt 미만에서 `RouterHost`, 넓은 화면에서 `RouterSplitHost`를 사용하며 같은 store의 `replaceHost`로 상세 이력을 유지합니다. watchOS에서는 `RouterHost`로 축소
-    - tab shell은 `@Router` + `@TabItem` + `RouterTabHost`, deep link는 scheme/host allowlist를 가진 `@Router` + `@DeepLink`의 generated resolver를 사용
-    - coordinator는 business intent와 sibling mediation만 소유하고 navigation store를 수동 보관하지 않음
+    - tab shell은 `@Router` + `@TabItem`의 generated catalog와 `@Bindable` native TabView, deep link는 scheme/host allowlist를 가진 `@Router` + `@DeepLink`의 generated resolver를 사용
+    - coordinator는 business intent와 sibling mediation을 소유합니다. People/Settings는 host가 store를 소유하고, adaptive Posts는 shared coordinator가 configured store의 수명을 소유해 탭·레이아웃 전환에서 이력을 보존합니다.
 - `Features/EntireTabFeature`
   - 3탭 셸 (`People`, `Posts`, `Settings`)
-  - `SampleTab`의 `@Router` + `@TabItem` 선언과 `RouterTabHost` 사용
+  - `SampleTab`의 `@Router` + `@TabItem` 선언으로 탭 ID·제목·아이콘·destination을 생성하고 leaf host를 한 번만 조립
   - `SampleDeepLink`의 `@DeepLink` 선언과 generated `resolveDeepLink(_:)` 사용
   - `EntireTabFeatureInterface / Logic / UI / Router / Testing / Tests`로 분리
   - `EntireTabContainer`는 `Router` 타깃에서 탭 coordinator를 조립
@@ -307,7 +307,7 @@ CI와 동일한 최소 gate:
 make verify-ci
 ```
 
-`make verify-ci`는 install/generate, exact version/revision 확인, layer boundary와 DI DAG 검사, 모든 모듈의 macOS 테스트, iOS 앱과 watch companion 빌드, macOS 앱 빌드를 실행합니다. GitHub Actions의 `.github/workflows/verify.yml`도 같은 target을 사용합니다.
+`make verify-ci`는 install/generate, exact version/revision 확인, layer boundary와 DI DAG 검사, 모든 모듈의 macOS 테스트, iOS 앱과 watch companion 빌드, macOS 앱 빌드, iPad mini의 native UI 회귀 테스트를 실행합니다. GitHub Actions의 `.github/workflows/verify.yml`도 같은 target을 사용하며 Xcode 27.1과 iOS 27.0 runtime을 사용합니다.
 
 로컬에서 더 넓게 확인하려면 아래를 사용합니다.
 
@@ -367,7 +367,7 @@ make verify
 | `InnoDI` | `7.0.1` | `@DIContainerRole`, `@Input`, `@Provide`, `@SubContainer`, generated overrides/prewarm, test-only `@GenerateMock`, owned async preparation/retry/close, `@Multibinding`, DAG plugin |
 | `InnoFlow` | `6.0.2` | strict phase-managed `@InnoFlow`, generated Action/Output case paths, `.perform`, cancellation IDs, typed dispatch outputs, `@BindableField`, redacted instrumentation, exhaustive `TestStore`, `ManualTestClock` |
 | `InnoNetwork` | `6.1.1` | `@APIDefinition`, explicit auth/refresh/retry/cache policy, persistent cache, operation handles/deadlines, bounded encoded requests, public test doubles |
-| `InnoRouter` | `7.0.0` | `@Router`, stable-ID `@TabItem`, `@DeepLink`, `@PresentationResult`, stack/tab/split hosts, action/state environments, Codable snapshot/draft/budget, `RouterTestStore` |
+| `InnoRouter` | `7.0.0` | `@Router`, stable-ID `@TabItem` catalog, `@DeepLink`, `@PresentationResult`, stack/split hosts, action/state environments, Codable snapshot/draft/budget, `RouterTestStore` |
 
 API별 사용 위치와 테스트/네이티브 검증 범위는 [ArchitectureReview](Docs/ArchitectureReview.md)를 참고합니다.
 `Scripts/check-library-versions.py`는 manifest, 생성된 lockfile의 exact version/revision, DI CLI revision, SwiftSyntax 604.0.0을 함께 확인합니다.
@@ -375,7 +375,11 @@ API별 사용 위치와 테스트/네이티브 검증 범위는 [ArchitectureRev
 UI 검증은 앱 경계의 generated override에 fixture repository를 주입합니다. Debug `--uitesting` 실행에서만 외부 API 대신 결정적 fixture를 사용하며, 실제 feature/reducer/router/host 조립은 그대로 실행합니다.
 
 ```bash
+make test-ui
+# 지정 기기를 사용할 때:
 make test-ui SIMULATOR_ID=<iOS-simulator-UDID>
 ```
+
+기본 UI gate는 iPad mini를 지원하는 최신 설치 runtime에서 전용 시뮬레이터를 선택합니다. 세로 744pt와 가로 1133pt 사이를 실제 회전해 Posts 상세, Highlights와 닫기 권한, 상세 복귀를 검증합니다. Settings Digest의 명시적 Close와 제스처 종료도 구분합니다. 실행 후 전용 시뮬레이터는 종료하며, `SIMULATOR_ID`로 지정한 기기는 종료하지 않습니다. runtime은 `UI_TEST_RUNTIME_VERSION`, 결과 bundle은 `UI_TEST_RESULT_BUNDLE`로 고정할 수 있습니다.
 
 CLI gate는 기존 `-skipPackagePluginValidation -skipMacroValidation` 신뢰 확인 플래그를 사용합니다. macro expansion과 DI validation은 실제로 실행됩니다. Xcode UI에서의 Trust & Enable 승인 상태는 이 CLI 결과와 별개입니다.
