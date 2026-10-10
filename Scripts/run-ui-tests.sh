@@ -16,12 +16,14 @@ cleanup() {
 trap cleanup EXIT
 
 echo "Running native UI regressions on $ui_simulator_id"
+# Complete the runtime's first boot before XCTest starts its per-test timer.
+xcrun simctl bootstatus "$ui_simulator_id" -b
 ui_command=(xcodebuild -skipPackagePluginValidation -skipMacroValidation
     -workspace "$ROOT/InnoSample.xcworkspace" -scheme InnoSampleApp
     -destination "platform=iOS Simulator,id=$ui_simulator_id"
     -derivedDataPath "${DERIVED_DATA:-/tmp/innosample-make}"
     -parallel-testing-enabled NO -test-timeouts-enabled YES
-    -default-test-execution-time-allowance 120 -maximum-test-execution-time-allowance 180)
+    -default-test-execution-time-allowance 180 -maximum-test-execution-time-allowance 300)
 if [[ -n "${UI_TEST_RESULT_BUNDLE:-}" ]]; then
     ui_command+=(-resultBundlePath "$UI_TEST_RESULT_BUNDLE")
 fi

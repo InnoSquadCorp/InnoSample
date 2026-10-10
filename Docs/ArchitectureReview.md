@@ -98,6 +98,8 @@ WebSocket/download/upload/OpenAPI/AWS/trust는 필요한 target이 선택하는 
 
 `make test-ui`는 최신 설치 runtime이 지원하는 전용 iPad mini를 선택하는 native gate입니다. `SIMULATOR_ID`로 다른 기기를 지정할 수 있으나 폭 전환 테스트는 iPad mini에서 실행해야 합니다. Debug `--uitesting`에서 generated root override로 fixture repository를 주입하며 실제 feature/reducer/router 구성은 유지합니다. CI는 `xcode-27` runner의 Xcode 27.1과 iOS 27.0 runtime을 고정하고 xcresult를 artifact로 보관합니다.
 
+테스트 전에 `simctl bootstatus -b`로 runtime 부팅 완료를 기다립니다. 느린 hosted runner에서도 전체 기본 흐름을 실행하도록 각 UI 테스트의 기본 제한은 180초, 최대 제한은 300초이며 실패 assertion이나 테스트를 건너뛰지 않습니다.
+
 CLI는 repository의 기존 package/macro trust confirmation skip flags를 사용합니다. macro compiler와 graph validation은 실행됩니다. Xcode UI trust 승인, 실제 device 기능, CI remote 실행, merge/release는 별개의 확인 항목입니다.
 
 ### 2026-10-10 local results
