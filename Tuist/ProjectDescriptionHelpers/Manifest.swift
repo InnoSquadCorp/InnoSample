@@ -23,6 +23,8 @@ public enum Manifest {
     public static let watchDeploymentTargets: DeploymentTargets = .watchOS("11.0")
     public static let baseSettings: Settings = .settings(base: [
         "SWIFT_VERSION": "6.3",
+        "ENABLE_USER_SCRIPT_SANDBOXING": "YES",
+        "STRING_CATALOG_GENERATE_SYMBOLS": "YES",
         "CODE_SIGNING_ALLOWED": "NO",
         "CODE_SIGNING_REQUIRED": "NO"
     ])
