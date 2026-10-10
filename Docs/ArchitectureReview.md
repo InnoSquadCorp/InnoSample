@@ -94,7 +94,9 @@ WebSocket/download/upload/OpenAPI/AWS/trust는 필요한 target이 선택하는 
 
 ## Verification contract
 
-`make verify`는 install/generate → resolved revision → import boundary → exact-release DI DAG → Domain/Data/Remote/4 leaf feature/Layers/Features/Analytics/App macOS tests → generic iOS app/watch companion → macOS app build를 실행합니다. `make verify-ci`는 이 전체 gate 후 native iOS UI 회귀 테스트까지 실행합니다.
+`make verify`는 7개 언어 README 검증 → install/generate → resolved revision → import boundary → exact-release DI DAG → Domain/Data/Remote/4 leaf feature/Layers/Features/Analytics/App macOS tests → generic iOS app/watch companion → macOS app build를 실행합니다. `make verify-ci`는 이 전체 gate 후 native iOS UI 회귀 테스트까지 실행합니다.
+
+`make verify-docs`는 영어와 한국어·스페인어·독일어·중국어 간체·일본어·러시아어 README의 section ID, heading 구조, 코드 블록, inline API/명령, 링크를 비교합니다. Swift 예제는 실제 source와 대조하고 release 표는 manifest에서 읽으며, 로컬 링크는 APFS에서도 대소문자를 구분해 확인합니다. 앱 UI 현지화와 별도로 README 번역을 관리합니다.
 
 `make test-ui`는 최신 설치 runtime이 지원하는 전용 iPad mini를 선택하는 native gate입니다. `SIMULATOR_ID`로 다른 기기를 지정할 수 있으나 폭 전환 테스트는 iPad mini에서 실행해야 합니다. Debug `--uitesting`에서 generated root override로 fixture repository를 주입하며 실제 feature/reducer/router 구성은 유지합니다. CI는 `xcode-27` runner의 Xcode 27.1과 iOS 27.0 runtime을 고정하고 xcresult를 artifact로 보관합니다.
 
@@ -127,3 +129,7 @@ CLI는 repository의 기존 package/macro trust confirmation skip flags를 사�
 | InnoSampleAppUnitTests | 4 |
 
 검증 증거는 ignored `.codex-artifacts/verify-posts-final.log`, `.codex-artifacts/ui-single-host-regression.log`, 해당 xcresult, `.codex-artifacts/posts-regression/device-single-host/`, `.codex-artifacts/posts-regression/verification-summary.json`에 있습니다. UI는 Debug fixture 경로를 사용합니다. live 서버/TLS, physical device, 원격 CI 실행, PR/merge/release는 이 local 결과에 포함되지 않습니다.
+
+### 2026-10-10 remote results
+
+코드 commit `499eca49983aa88e9bad8defdffc3ef3b05be6f2`의 [GitHub Actions 실행](https://github.com/InnoSquadCorp/InnoSample/actions/runs/38023611196)은 성공했습니다. macOS 모듈 테스트 86개, iOS 앱/watch companion 및 macOS 빌드, native UI 테스트 6개를 통과했습니다. 업로드한 xcresult도 Passed, 실패 0, skip 0입니다. 이 기록은 해당 코드 commit의 결과이며 이후 main push의 CI는 각 실행의 head SHA와 함께 확인해야 합니다.

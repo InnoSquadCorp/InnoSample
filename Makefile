@@ -5,13 +5,14 @@ WORKSPACE := $(ROOT)/InnoSample.xcworkspace
 DERIVED_DATA ?= /tmp/innosample-make
 PACKAGE_VALIDATION_FLAGS := -skipPackagePluginValidation -skipMacroValidation
 
-.PHONY: help install-dependencies generate open verify-versions verify-boundaries verify-di test-domain test-data test-remote test-leaf-features test-layers test-features test-analytics test-app test-ui build-app build-macos verify-ci verify
+.PHONY: help install-dependencies generate open verify-docs verify-versions verify-boundaries verify-di test-domain test-data test-remote test-leaf-features test-layers test-features test-analytics test-app test-ui build-app build-macos verify-ci verify
 
 help:
 	@echo "Available targets:"
 	@echo "  make install-dependencies # Resolve Tuist package dependencies"
 	@echo "  make generate             # Regenerate Tuist workspace/projects"
 	@echo "  make open                 # Open the generated workspace"
+	@echo "  make verify-docs          # Check localized READMEs against source and release pins"
 	@echo "  make verify-boundaries    # Check layer import boundaries"
 	@echo "  make verify-di            # Validate InnoDI container DAG"
 	@echo "  make verify-versions      # Verify exact release revisions in the resolved graph"
@@ -25,7 +26,8 @@ help:
 	@echo "  make test-analytics       # Run the Analytics wrapper tests"
 	@echo "  make test-ui              # Run native UI regressions on a dedicated iPad mini"
 	@echo "  make build-app            # Build InnoSampleApp for iOS"
-	@echo "  make verify-ci            # Run the CI gate used by pull requests"
+	@echo "  make build-macos          # Build InnoSampleApp for macOS"
+	@echo "  make verify-ci            # Run the full gate including native UI regressions"
 	@echo "  make verify               # Run the full local gate"
 
 install-dependencies:
@@ -36,6 +38,9 @@ generate:
 
 open:
 	open "$(WORKSPACE)"
+
+verify-docs:
+	cd "$(ROOT)" && python3 ./Scripts/check-readme-sync.py
 
 verify-boundaries:
 	cd "$(ROOT)" && ./Scripts/check-layer-boundaries.sh
@@ -85,4 +90,4 @@ build-macos:
 verify-ci: verify
 	$(MAKE) test-ui DERIVED_DATA="$(DERIVED_DATA)"
 
-verify: install-dependencies generate verify-versions verify-boundaries verify-di test-domain test-data test-remote test-leaf-features test-layers test-features test-analytics test-app build-app build-macos
+verify: verify-docs install-dependencies generate verify-versions verify-boundaries verify-di test-domain test-data test-remote test-leaf-features test-layers test-features test-analytics test-app build-app build-macos
