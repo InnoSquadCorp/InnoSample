@@ -6,7 +6,7 @@
 
 | Library | Version | Reviewed release commit |
 | --- | --- | --- |
-| InnoDI | 7.0.1 | `ce47cf4b207c3b8810b2a7d7d622a2f8ead3ed96` |
+| InnoDI | 7.0.2 | `b8b03757d659e269217cf10baaa9247b8c29991a` |
 | InnoFlow | 6.0.2 | `1176de1e4783b638c03a9334f43cc49378957148` |
 | InnoNetwork | 6.1.1 | `44e4ca28c50c03f817231a077c0f3bdfdbc859c8` |
 | InnoRouter | 7.0.0 | `33b0da7639105cfa8e6f5acffa3badb91b5e0254` |
@@ -22,7 +22,7 @@
 - UI: renderable model과 callback. Domain/Remote/Data/InnoRouter를 직접 import하지 않습니다.
 - Router: host, route, presentation result, URL와 sibling mediation의 경계.
 
-DI role은 실제 graph ownership과 일치시킵니다. App은 `ContainerRole.root`, `@SubContainer`로 마운트하는 FeatureContainer/EntireTabContainer는 `component`, 순차 provider composition과 leaf의 local factory는 `local`입니다. 7.0.1 factory root parameter는 `@Input`/`@Provide` member를 참조합니다. 하위 container에서 다시 interface를 뽑아 다른 provider에 전달하는 순차 조립은 typed provider/factory로 선언합니다. 모든 container 선언 target과 test fixture target에 DAG plugin을 연결합니다.
+DI role은 실제 graph ownership과 일치시킵니다. App은 `ContainerRole.root`, `@SubContainer`로 마운트하는 FeatureContainer/EntireTabContainer는 `component`, 순차 provider composition과 leaf의 local factory는 `local`입니다. 7.0.2 factory root parameter는 `@Input`/`@Provide` member를 참조합니다. 하위 container에서 다시 interface를 뽑아 다른 provider에 전달하는 순차 조립은 typed provider/factory로 선언합니다. 모든 container 선언 target과 test fixture target에 DAG plugin을 연결합니다.
 
 Coordinator와 feature Store는 container의 shared scope를 유지합니다. 같은 container를 다시 읽어도 새 navigation/business authority를 만들지 않습니다. People/Settings의 leaf host는 default store가 navigation state를 소유합니다. 탭 선택은 shared coordinator의 generated `SampleTab.Tab` 값이며 `@Bindable`로 native TabView에 연결합니다. Posts의 shared coordinator는 하나의 configured store를 소유하므로 host가 다시 생성돼도 상세 이력을 유지합니다. 탭 viewport에서 너비를 관찰해 800pt 미만에서는 stack, 넓은 화면에서는 두 column을 표시하는 split으로 렌더링합니다. `replaceHost`로 descriptor와 전체 detail stack을 함께 전환합니다. 활성 presentation이 있으면 기존 host와 captured handle을 유지하며, 닫힌 뒤 마지막 너비 요청을 적용합니다. 모든 leaf coordinator 환경은 tab host의 공통 ancestor에 주입합니다.
 

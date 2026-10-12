@@ -18,7 +18,7 @@
 
 | 라이브러리 | 고정 릴리스 | 책임 |
 | --- | --- | --- |
-| [InnoDI](https://github.com/InnoSquadCorp/InnoDI/tree/7.0.1) | 7.0.1 | 컨테이너, provider·override 생성, 의존 그래프 검증 |
+| [InnoDI](https://github.com/InnoSquadCorp/InnoDI/tree/7.0.2) | 7.0.2 | 컨테이너, provider·override 생성, 의존 그래프 검증 |
 | [InnoFlow](https://github.com/InnoSquadCorp/InnoFlow/tree/6.0.2) | 6.0.2 | 상태, action, phase, 비동기 effect, typed output |
 | [InnoNetwork](https://github.com/InnoSquadCorp/InnoNetwork/tree/6.1.1) | 6.1.1 | Endpoint 매크로, transport, 인증, retry, HTTP cache |
 | [InnoRouter](https://github.com/InnoSquadCorp/InnoRouter/tree/7.0.0) | 7.0.0 | Route, 탭, deep link, stack/split host, typed presentation 결과 |

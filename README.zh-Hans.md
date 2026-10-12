@@ -18,7 +18,7 @@
 
 | 库 | 固定版本 | 职责 |
 | --- | --- | --- |
-| [InnoDI](https://github.com/InnoSquadCorp/InnoDI/tree/7.0.1) | 7.0.1 | 容器、生成 provider/override、依赖图验证 |
+| [InnoDI](https://github.com/InnoSquadCorp/InnoDI/tree/7.0.2) | 7.0.2 | 容器、生成 provider/override、依赖图验证 |
 | [InnoFlow](https://github.com/InnoSquadCorp/InnoFlow/tree/6.0.2) | 6.0.2 | 状态、action、phase、异步 effect、类型化 output |
 | [InnoNetwork](https://github.com/InnoSquadCorp/InnoNetwork/tree/6.1.1) | 6.1.1 | Endpoint 宏、transport、认证、重试、HTTP 缓存 |
 | [InnoRouter](https://github.com/InnoSquadCorp/InnoRouter/tree/7.0.0) | 7.0.0 | Route、标签页、deep link、stack/split host、类型化 presentation 结果 |

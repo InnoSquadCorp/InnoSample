@@ -7,7 +7,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 RELEASES = {
-    "innodi": ("innoDI", "7.0.1", "ce47cf4b207c3b8810b2a7d7d622a2f8ead3ed96"),
+    "innodi": ("innoDI", "7.0.2", "b8b03757d659e269217cf10baaa9247b8c29991a"),
     "innoflow": ("innoFlow", "6.0.2", "1176de1e4783b638c03a9334f43cc49378957148"),
     "innonetwork": ("innoNetwork", "6.1.1", "44e4ca28c50c03f817231a077c0f3bdfdbc859c8"),
     "innorouter": ("innoRouter", "7.0.0", "33b0da7639105cfa8e6f5acffa3badb91b5e0254"),
@@ -30,7 +30,7 @@ def main():
             raise ValueError(f"{identity}: resolved version/revision differs from the reviewed release")
         print(f"[PASS] {identity} {version} {revision}")
     if pins.get("swift-syntax", {}).get("state", {}).get("version") != "604.0.0":
-        raise ValueError("InnoDI 7.0.1 requires the reviewed swift-syntax 604.0.0 graph")
+        raise ValueError("InnoDI 7.0.2 requires the reviewed swift-syntax 604.0.0 graph")
     graph_script = (ROOT / "Scripts/check-di-graph.sh").read_text()
     if f'INNODI_RELEASE_REVISION="{RELEASES["innodi"][2]}"' not in graph_script:
         raise ValueError("The DI validator must use the same release as the consumer")

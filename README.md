@@ -18,7 +18,7 @@ This README describes the checked-in app. The [architecture review](Docs/Archite
 
 | Library | Exact release | Responsibility |
 | --- | --- | --- |
-| [InnoDI](https://github.com/InnoSquadCorp/InnoDI/tree/7.0.1) | 7.0.1 | Containers, generated providers/overrides and dependency-graph validation |
+| [InnoDI](https://github.com/InnoSquadCorp/InnoDI/tree/7.0.2) | 7.0.2 | Containers, generated providers/overrides and dependency-graph validation |
 | [InnoFlow](https://github.com/InnoSquadCorp/InnoFlow/tree/6.0.2) | 6.0.2 | State, actions, phases, asynchronous effects and typed outputs |
 | [InnoNetwork](https://github.com/InnoSquadCorp/InnoNetwork/tree/6.1.1) | 6.1.1 | Endpoint macros, transport, authentication, retry and HTTP cache |
 | [InnoRouter](https://github.com/InnoSquadCorp/InnoRouter/tree/7.0.0) | 7.0.0 | Routes, tabs, deep links, stack/split hosts and typed presentation results |

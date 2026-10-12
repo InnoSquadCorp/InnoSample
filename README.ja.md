@@ -18,7 +18,7 @@
 
 | ライブラリ | 固定リリース | 役割 |
 | --- | --- | --- |
-| [InnoDI](https://github.com/InnoSquadCorp/InnoDI/tree/7.0.1) | 7.0.1 | Container、provider・overrideの生成、依存グラフ検証 |
+| [InnoDI](https://github.com/InnoSquadCorp/InnoDI/tree/7.0.2) | 7.0.2 | Container、provider・overrideの生成、依存グラフ検証 |
 | [InnoFlow](https://github.com/InnoSquadCorp/InnoFlow/tree/6.0.2) | 6.0.2 | State、action、phase、非同期effect、typed output |
 | [InnoNetwork](https://github.com/InnoSquadCorp/InnoNetwork/tree/6.1.1) | 6.1.1 | Endpointマクロ、transport、認証、retry、HTTP cache |
 | [InnoRouter](https://github.com/InnoSquadCorp/InnoRouter/tree/7.0.0) | 7.0.0 | Route、タブ、deep link、stack/split host、型付きpresentation結果 |

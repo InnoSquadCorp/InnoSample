@@ -76,7 +76,7 @@ public extension Package {
     static var innoDI: Self {
         .remote(
             url: "https://github.com/InnoSquadCorp/InnoDI.git",
-            requirement: .exact("7.0.1")
+            requirement: .exact("7.0.2")
         )
     }
 

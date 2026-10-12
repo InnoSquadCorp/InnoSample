@@ -18,7 +18,7 @@ README описывает приложение в репозитории. [Об�
 
 | Библиотека | Точная версия | Ответственность |
 | --- | --- | --- |
-| [InnoDI](https://github.com/InnoSquadCorp/InnoDI/tree/7.0.1) | 7.0.1 | Контейнеры, генерация provider/override, проверка графа зависимостей |
+| [InnoDI](https://github.com/InnoSquadCorp/InnoDI/tree/7.0.2) | 7.0.2 | Контейнеры, генерация provider/override, проверка графа зависимостей |
 | [InnoFlow](https://github.com/InnoSquadCorp/InnoFlow/tree/6.0.2) | 6.0.2 | Состояние, действия, фазы, асинхронные эффекты и типизированные outputs |
 | [InnoNetwork](https://github.com/InnoSquadCorp/InnoNetwork/tree/6.1.1) | 6.1.1 | Макросы endpoint, транспорт, аутентификация, повторы и HTTP-кеш |
 | [InnoRouter](https://github.com/InnoSquadCorp/InnoRouter/tree/7.0.0) | 7.0.0 | Маршруты, вкладки, deep links, stack/split hosts и типизированные результаты представлений |

@@ -18,7 +18,7 @@ Dieses README beschreibt die eingecheckte App. Der [Architekturbericht](Docs/Arc
 
 | Bibliothek | Exakte Version | Verantwortung |
 | --- | --- | --- |
-| [InnoDI](https://github.com/InnoSquadCorp/InnoDI/tree/7.0.1) | 7.0.1 | Container, generierte Provider/Overrides und Prüfung des Abhängigkeitsgraphen |
+| [InnoDI](https://github.com/InnoSquadCorp/InnoDI/tree/7.0.2) | 7.0.2 | Container, generierte Provider/Overrides und Prüfung des Abhängigkeitsgraphen |
 | [InnoFlow](https://github.com/InnoSquadCorp/InnoFlow/tree/6.0.2) | 6.0.2 | Zustand, Aktionen, Phasen, asynchrone Effekte und typisierte Outputs |
 | [InnoNetwork](https://github.com/InnoSquadCorp/InnoNetwork/tree/6.1.1) | 6.1.1 | Endpoint-Makros, Transport, Authentifizierung, Wiederholungen und HTTP-Cache |
 | [InnoRouter](https://github.com/InnoSquadCorp/InnoRouter/tree/7.0.0) | 7.0.0 | Routen, Tabs, Deep Links, Stack-/Split-Hosts und typisierte Präsentationsergebnisse |

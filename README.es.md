@@ -18,7 +18,7 @@ Este README describe la aplicación del repositorio. La [revisión de arquitectu
 
 | Biblioteca | Versión exacta | Responsabilidad |
 | --- | --- | --- |
-| [InnoDI](https://github.com/InnoSquadCorp/InnoDI/tree/7.0.1) | 7.0.1 | Contenedores, proveedores y sustituciones generados, validación del grafo |
+| [InnoDI](https://github.com/InnoSquadCorp/InnoDI/tree/7.0.2) | 7.0.2 | Contenedores, proveedores y sustituciones generados, validación del grafo |
 | [InnoFlow](https://github.com/InnoSquadCorp/InnoFlow/tree/6.0.2) | 6.0.2 | Estado, acciones, fases, efectos asíncronos y salidas tipadas |
 | [InnoNetwork](https://github.com/InnoSquadCorp/InnoNetwork/tree/6.1.1) | 6.1.1 | Macros de endpoints, transporte, autenticación, reintentos y caché HTTP |
 | [InnoRouter](https://github.com/InnoSquadCorp/InnoRouter/tree/7.0.0) | 7.0.0 | Rutas, pestañas, enlaces profundos, hosts stack/split y resultados tipados |
